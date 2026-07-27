@@ -219,8 +219,10 @@ El conjunto de datos contiene `r nrow(df_original)` registros y `r ncol(df_origi
 dim(df_original)
 head(df_original)
 tail(df_original)
+summary(df_original)
 str(df_original)
 colnames(df_original)
+
 ```
 
 ```{r resumen-inicial}
