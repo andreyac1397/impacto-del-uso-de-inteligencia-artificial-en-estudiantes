@@ -2965,17 +2965,17 @@ En esta sección se encuentran los principales archivos, respaldos y enlaces rel
 <section class="recursos-proyecto">
 <div class="recursos-grid">
 
-<a href="ENLACE_GITHUB" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/github.png" alt="Icono de GitHub"></span><span class="recurso-contenido"><strong>Repositorio de GitHub</strong><small>Código fuente, archivo R Markdown y estilos CSS</small></span></a>
+<a href="https://github.com/andreyac1397/impacto-del-uso-de-inteligencia-artificial-en-estudiantes" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/github.png" alt="Icono de GitHub"></span><span class="recurso-contenido"><strong>Repositorio de GitHub</strong><small>Código fuente, archivo R Markdown y estilos CSS</small></span></a>
 
-<a href="ENLACE_RESPALDO" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/respaldo.png" alt="Icono de respaldo"></span><span class="recurso-contenido"><strong>Carpeta de respaldo</strong><small>Archivos y copias de seguridad del proyecto</small></span></a>
+<a href="https://drive.google.com/drive/folders/1XhFoX9Ruc2iRRSX4qJ79FtVMzysCCA8P?usp=sharing" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/respaldo.png" alt="Icono de respaldo"></span><span class="recurso-contenido"><strong>Carpeta de respaldo</strong><small>Archivos y copias de seguridad del proyecto</small></span></a>
 
-<a href="ENLACE_DATASET" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/dataset.png" alt="Icono del dataset"></span><span class="recurso-contenido"><strong>Dataset original</strong><small>Fuente de los datos utilizada en el proyecto</small></span></a>
+<a href="https://www.kaggle.com/datasets/laveshjadon/ai-impact-on-students" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/dataset.png" alt="Icono del dataset"></span><span class="recurso-contenido"><strong>Dataset original</strong><small>Fuente de los datos utilizada en el proyecto</small></span></a>
 
-<a href="ENLACE_CANVA" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/canva.png" alt="Icono de Canva"></span><span class="recurso-contenido"><strong>Presentación del proyecto</strong><small>Consultar la presentación realizada en Canva</small></span></a>
+<a href="https://canva.link/1fp54yzyha6ejyq" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/canva.png" alt="Icono de Canva"></span><span class="recurso-contenido"><strong>Presentación del proyecto</strong><small>Consultar la presentación realizada en Canva</small></span></a>
 
 <button type="button" class="recurso-boton" onclick="window.print()"><span class="recurso-icono"><img src="Iconos/pdf.png" alt="Icono de PDF"></span><span class="recurso-contenido"><strong>Guardar informe en PDF</strong><small>Abrir la impresión y elegir dónde guardarlo</small></span></button>
 
-<a href="ENLACE_HTML_PUBLICADO" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/web.png" alt="Icono del sitio web"></span><span class="recurso-contenido"><strong>HTML publicado</strong><small>Consultar el informe interactivo en línea</small></span></a>
+<a href="https://andreyac1397.github.io/impacto-del-uso-de-inteligencia-artificial-en-estudiantes/" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/web.png" alt="Icono del sitio web"></span><span class="recurso-contenido"><strong>HTML publicado</strong><small>Consultar el informe interactivo en línea</small></span></a>
 
 </div>
 </section>
