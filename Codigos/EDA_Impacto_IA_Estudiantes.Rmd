@@ -20,7 +20,7 @@ output:
     code_folding: show
     css: estilos.css
 params:
-  ruta_csv: "C:/Users/andre/Documents/Cuatrimeste_ll_2026/BigData/ExploracionDatos/Proyecto/DataSet/ai_student_impact_dataset.csv"
+  ruta_csv: "../DataSet/ai_student_impact_dataset.csv"
   
 ---
 
@@ -109,7 +109,7 @@ El archivo permite analizar:
 
 El análisis utiliza la información disponible en el archivo original. Las relaciones encontradas son descriptivas y asociativas. No se puede concluir que una variable cause directamente cambios en otra.
 
-# Diccionario de variables
+# Libreria y Diccionario de variables
 
 ```{r diccionario-variables}
 library(tidyverse)
@@ -141,19 +141,6 @@ diccionario <- tribble(
 kable(diccionario, caption = "Diccionario de variables")
 ```
 
-# Librerías utilizadas
-
-```{r librerias}
-# Instalar las que hagan falta
-# install.packages(c("tidyverse", "knitr", "scales", "cluster", "nortest"))
-
-
-library(tidyverse)
-library(knitr)
-library(scales)
-library(cluster)
-library(nortest)
-```
 
 Las funciones principales utilizadas pertenecen a:
 
@@ -206,7 +193,7 @@ cat("Cantidad de columnas:", ncol(df_original), "\n")
 
 ## Revisión inicial
 
-El conjunto de datos contiene 50 000 registros y 16 variables. De ellas, 8 son numéricas y fueron reconocidas correctamente, mientras que 6 son categóricas y se cargaron como texto, por lo que se convertirán posteriormente. Además, se identificó una variable identificadora y una variable lógica.
+El conjunto de datos contiene `r nrow(df_original)` registros y `r ncol(df_original)` variables. De ellas, 8 son numéricas y fueron reconocidas correctamente, mientras que 6 son categóricas y se cargaron como texto, por lo que se convertirán posteriormente. Además, se identificó una variable identificadora y una variable lógica.
 
 ```{r revision-inicial}
 dim(df_original)
@@ -301,7 +288,7 @@ str(df_limpio)
 
 ## Valores faltantes
 
-Se revisó cuántos valores faltantes existen en cada variable y qué porcentaje representan. El resultado mostró que ninguna de las 16 variables contiene datos faltantes, por lo que no fue necesario eliminar registros ni aplicar imputación. Esta revisión es importante para confirmar que el dataset está completo antes del análisis.
+Se revisó cuántos valores faltantes existen en cada variable y qué porcentaje representan.El resultado mostró que ninguna de las `r ncol(df_limpio)` variables contiene datos faltantes, por lo que no fue necesario eliminar registros ni aplicar imputación. Esta revisión es importante para confirmar que el dataset está completo antes del análisis.
 ```{r valores-faltantes}
 faltantes_por_variable <- df_limpio %>%
   summarise(across(everything(), ~ sum(is.na(.)))) %>%
@@ -383,8 +370,6 @@ kable(validacion_rangos, caption = "Validación de rangos esperados")
 
 ## Valores atípicos
 
-Se identificaron valores atípicos mediante el rango intercuartílico. La mayor cantidad se encontró en las horas semanales de uso de IA, con 2583 casos. Estos valores se conservaron porque se encuentran dentro de rangos válidos y pueden representar comportamientos reales.
-
 ```{r deteccion-atipicos}
 variables_continuas <- c(
   "Pre_Semester_GPA",
@@ -417,9 +402,13 @@ tabla_atipicos <- map_dfr(
 kable(tabla_atipicos, digits = 3, caption = "Valores atípicos por variable")
 ```
 
+Se identificaron valores atípicos mediante el rango intercuartílico. La mayor cantidad de valores atípicos se encontró en `r tabla_atipicos$Variable[which.max(tabla_atipicos$Cantidad_atipicos)]`, con `r max(tabla_atipicos$Cantidad_atipicos)` casos. Estos valores se conservaron porque se encuentran dentro de rangos válidos y pueden representar comportamientos reales.
+
+
 ## Resultado de la limpieza
 
-El conjunto de datos no presentó valores faltantes, duplicados ni valores fuera de rango. Por lo tanto, se conservaron las 50 000 filas y las 16 variables para continuar con el análisis.
+El conjunto de datos no presentó valores faltantes, duplicados ni valores fuera de rango. Por lo tanto, se conservaron las `r nrow(df_limpio)` filas y las `r ncol(df_limpio)` variables para continuar con el análisis.
+
 ```{r resultado-limpieza}
 resumen_limpieza <- tibble(
   Indicador = c(
@@ -540,12 +529,9 @@ kable(
   caption = "Estadísticos descriptivos de las variables numéricas"
 )
 ```
-Los resultados muestran que el promedio posterior al semestre fue de 3,349, superior al promedio previo de 3,146. El uso semanal de IA presentó una media de 8,428 horas y una mediana de 5,8 horas, lo que indica que algunos estudiantes registran un uso considerablemente mayor. El puntaje promedio de retención de habilidades fue de 75,798.
 
+Los resultados muestran que el promedio posterior al semestre fue de `r format(round(mean(df_limpio$Post_Semester_GPA), 3), decimal.mark = ",", nsmall = 3)`, superior al promedio previo de `r format(round(mean(df_limpio$Pre_Semester_GPA), 3), decimal.mark = ",", nsmall = 3)`. El uso semanal de IA presentó una media de `r format(round(mean(df_limpio$Weekly_GenAI_Hours), 3), decimal.mark = ",", nsmall = 3)` horas y una mediana de `r format(round(median(df_limpio$Weekly_GenAI_Hours), 1), decimal.mark = ",", nsmall = 1)` horas, lo que indica que algunos estudiantes registran un uso considerablemente mayor. El puntaje promedio de retención de habilidades fue de `r format(round(mean(df_limpio$Skill_Retention_Score), 3), decimal.mark = ",", nsmall = 3)`.
 
-### Histogramas
-
-Se utilizaron histogramas para observar la distribución de las variables numéricas continuas. La línea discontinua representa la media de cada variable.
 
 ### Histogramas
 
@@ -2256,7 +2242,7 @@ El número seleccionado fue `r mejor_k`, porque presentó la silueta promedio m�
 
 ## Aplicación de K-means
 
-Una vez seleccionado el número de grupos, K-means se aplica sobre los 50 000 registros.
+Una vez seleccionado el número de grupos, K-means se aplica sobre los `r nrow(datos_cluster)` registros.
 
 ```{r modelo-kmeans}
 set.seed(142)
@@ -2903,7 +2889,7 @@ Los resultados deben interpretarse considerando tanto la significancia estadíst
 
 # Conclusiones
 
-1. El conjunto de datos se encontró completo y en condiciones adecuadas para el análisis. No se detectaron valores faltantes, registros duplicados ni valores fuera de los rangos establecidos, por lo que se conservaron los 50 000 estudiantes y las 16 variables.
+1. El conjunto de datos se encontró completo y en condiciones adecuadas para el análisis. No se detectaron valores faltantes, registros duplicados ni valores fuera de los rangos establecidos, por lo que se conservaron los `r nrow(df_limpio)` estudiantes y las `r ncol(df_limpio)` variables
 
 2. Las variables continuas no presentaron una distribución normal perfecta. Esto fue confirmado mediante la prueba de Lilliefors, los histogramas y los gráficos Q-Q, por lo que se utilizaron principalmente métodos no paramétricos.
 
@@ -2917,7 +2903,7 @@ Los resultados deben interpretarse considerando tanto la significancia estadíst
 
 7. El ACP permitió resumir las ocho variables numéricas utilizadas. Los dos primeros componentes explicaron aproximadamente `r percent(sum(porcentaje_varianza[1:2]), accuracy = 0.1)` de la variabilidad y los primeros tres explicaron `r percent(sum(porcentaje_varianza[1:3]), accuracy = 0.1)`.
 
-8. K-means identificó `r mejor_k` perfiles de estudiantes. Uno presentó un mejor rendimiento académico y mayor retención de habilidades; otro concentró un uso considerablemente mayor de IA, junto con niveles superiores de dependencia y ansiedad; y otro presentó resultados académicos relativamente menores.
+8. K-means identificó `r mejor_k` perfiles de estudiantes. El clúster `r as.character(cluster_mayor_rendimiento$Cluster)` presentó el mejor rendimiento académico y una mayor retención de habilidades; el clúster `r as.character(cluster_mayor_uso_ia$Cluster)` concentró el mayor uso de IA, junto con niveles superiores de dependencia y ansiedad; mientras que el clúster `r as.character(cluster_menor_rendimiento$Cluster)` presentó los resultados académicos más bajos.
 
 9. La silueta promedio de `r round(silueta_promedio_final, 3)` indica que la separación entre los clústeres es `r interpretar_silueta(silueta_promedio_final)`. Por ello, los grupos deben considerarse perfiles generales con cierto traslape y no categorías completamente diferenciadas.
 
@@ -2943,7 +2929,7 @@ Los resultados deben interpretarse considerando tanto la significancia estadíst
 
 - La selección del número de clústeres y la evaluación mediante silueta se realizaron utilizando muestras para controlar el consumo de memoria.
 
-- La silueta promedio obtenida muestra una separación débil, por lo que existe traslape entre los perfiles y no deben considerarse grupos completamente definidos.
+- La silueta promedio obtenida fue de `r round(silueta_promedio_final, 3)` y muestra una separación `r interpretar_silueta(silueta_promedio_final)`, por lo que existe traslape entre los perfiles y no deben considerarse grupos completamente definidos.
 
 - Las categorías predominantes representan la categoría más frecuente de cada clúster, pero no necesariamente describen a todos sus integrantes.
 
