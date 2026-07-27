@@ -1,0 +1,872 @@
+/* =========================================================
+   ESTILOS GENERALES
+   Proyecto EDA - Impacto de la IA en estudiantes
+   ========================================================= */
+
+:root {
+  --color-principal: #17365d;
+  --color-secundario: #245784;
+  --color-acento: #2c7fb8;
+  --color-claro: #eef4f8;
+  --color-fondo: #f5f7fa;
+  --color-borde: #d8e0e7;
+  --color-texto: #263238;
+  --color-texto-suave: #607080;
+  --color-blanco: #ffffff;
+  --sombra-suave: 0 4px 18px rgba(23, 54, 93, 0.08);
+  --radio: 8px;
+}
+
+/* =========================================================
+   CUERPO DEL DOCUMENTO
+   ========================================================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-fondo);
+  color: var(--color-texto);
+  font-family:
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* Contenedor principal del HTML */
+
+.main-container {
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 45px 55px;
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-borde);
+  border-radius: 10px;
+  box-shadow: var(--sombra-suave);
+}
+
+/* =========================================================
+   PORTADA DEL DOCUMENTO
+   ========================================================= */
+
+h1.title {
+  margin-top: 0;
+  margin-bottom: 18px;
+  padding-bottom: 20px;
+  color: var(--color-principal);
+  font-size: 2.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  border-bottom: 3px solid var(--color-acento);
+}
+
+h4.author {
+  margin: 5px 0;
+  color: var(--color-texto-suave);
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+h4.date {
+  margin-top: 18px;
+  margin-bottom: 35px;
+  color: var(--color-secundario);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* =========================================================
+   TÍTULOS Y SUBTÍTULOS
+   ========================================================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family:
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+h1:not(.tittle) {
+  margin-top: 55px;
+  margin-bottom: 25px;
+  padding: 13px 18px;
+  color: var(--color-blanco);
+  font-size: 1.85rem;
+  background-color: var(--color-principal);
+  border-radius: var(--radio);
+}
+
+h2 {
+  margin-top: 42px;
+  margin-bottom: 18px;
+  padding-bottom: 9px;
+  color: var(--color-principal);
+  font-size: 1.55rem;
+  border-bottom: 2px solid var(--color-acento);
+}
+
+h3 {
+  margin-top: 32px;
+  margin-bottom: 14px;
+  color: var(--color-secundario);
+  font-size: 1.28rem;
+}
+
+h4 {
+  margin-top: 25px;
+  color: var(--color-principal);
+  font-size: 1.1rem;
+}
+
+/* Evita que los títulos queden ocultos al desplazarse */
+
+h1,
+h2,
+h3,
+h4 {
+  scroll-margin-top: 25px;
+}
+
+/* =========================================================
+   PÁRRAFOS, LISTAS Y ENLACES
+   ========================================================= */
+
+p {
+  margin-top: 0;
+  margin-bottom: 16px;
+  text-align: justify;
+}
+
+ul,
+ol {
+  margin-top: 10px;
+  margin-bottom: 20px;
+  padding-left: 28px;
+}
+
+li {
+  margin-bottom: 7px;
+}
+
+strong {
+  color: var(--color-principal);
+}
+
+a {
+  color: var(--color-acento);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+a:hover,
+a:focus {
+  color: var(--color-principal);
+  text-decoration: underline;
+}
+
+/* =========================================================
+   TABLA DE CONTENIDO LATERAL
+   ========================================================= */
+
+.tocify {
+  width: 320px !important;
+  max-height: 88vh;
+  padding: 12px 8px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  box-shadow: var(--sombra-suave);
+}
+
+/* Configuración general de todos los elementos */
+
+.tocify .tocify-item {
+  display: block;
+  width: 100%;
+  margin: 2px 0;
+  color: #52697d;
+  font-family: "Segoe UI", Arial, sans-serif;
+  line-height: 1.35;
+  text-align: left !important;
+  white-space: normal;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+}
+
+/* Nivel 1: títulos creados con # */
+
+.tocify > .tocify-header > .tocify-item,
+.tocify .tocify-header > .tocify-item {
+  padding: 9px 12px !important;
+  color: #17365d;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+/* Nivel 2: subtítulos creados con ## */
+
+.tocify .tocify-subheader > .tocify-item {
+  padding: 8px 12px 8px 28px !important;
+  color: #52697d;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* Elemento seleccionado */
+
+.tocify .tocify-focus {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  background-color: #17365d !important;
+  border-left-color: #2c7fb8 !important;
+}
+
+/* Elemento al pasar el cursor */
+
+.tocify .tocify-item:hover {
+  color: #17365d !important;
+  background-color: #eef4f8;
+}
+
+/* El elemento activo conserva el texto blanco */
+
+.tocify .tocify-focus:hover {
+  color: #ffffff !important;
+  background-color: #245784 !important;
+}
+
+/* Separación entre secciones principales */
+
+.tocify .tocify-header > .tocify-item {
+  margin-top: 5px;
+}
+
+/* Barra de desplazamiento */
+
+.tocify::-webkit-scrollbar {
+  width: 7px;
+}
+
+.tocify::-webkit-scrollbar-track {
+  background-color: #f1f4f6;
+  border-radius: 10px;
+}
+
+.tocify::-webkit-scrollbar-thumb {
+  background-color: #9eacb9;
+  border-radius: 10px;
+}
+
+.tocify::-webkit-scrollbar-thumb:hover {
+  background-color: #718393;
+}
+
+/* =========================================================
+   TABLAS
+   ========================================================= */
+
+table {
+  width: 100%;
+  margin: 22px 0 30px;
+  overflow: hidden;
+  font-size: 0.92rem;
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-borde);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--radio);
+  box-shadow: 0 2px 10px rgba(23, 54, 93, 0.05);
+}
+
+table thead th {
+  padding: 12px 14px;
+  color: var(--color-blanco);
+  font-weight: 600;
+  text-align: left;
+  vertical-align: middle;
+  background-color: var(--color-principal);
+  border-bottom: 2px solid var(--color-acento);
+}
+
+table tbody td {
+  padding: 11px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid #e4e9ee;
+}
+
+table tbody tr:nth-child(even) {
+  background-color: #f6f9fb;
+}
+
+table tbody tr:hover {
+  background-color: var(--color-claro);
+}
+
+table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Títulos de tablas */
+
+caption {
+  margin-bottom: 10px;
+  color: var(--color-principal);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* Tablas paginadas de R Markdown */
+
+.pagedtable-wrapper {
+  margin: 22px 0 30px;
+  overflow: hidden;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: 0 2px 10px rgba(23, 54, 93, 0.05);
+}
+
+.pagedtable-header {
+  color: var(--color-blanco);
+  background-color: var(--color-principal);
+}
+
+/* =========================================================
+   CÓDIGO R
+   ========================================================= */
+
+pre {
+  margin: 18px 0 24px;
+  padding: 17px 20px;
+  overflow-x: auto;
+  color: #e6edf3;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  background-color: #1f2933;
+  border: 1px solid #344454;
+  border-left: 5px solid var(--color-acento);
+  border-radius: var(--radio);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+code {
+  font-family:
+    Consolas,
+    "Courier New",
+    monospace;
+}
+
+p code,
+li code,
+td code {
+  padding: 2px 6px;
+  color: #a61b1b;
+  font-size: 0.9em;
+  background-color: #f1f3f5;
+  border: 1px solid #e1e5e8;
+  border-radius: 4px;
+}
+
+/* Botón para mostrar u ocultar código */
+
+.btn-default {
+  color: var(--color-principal);
+  font-weight: 600;
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-acento);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-default:hover,
+.btn-default:focus {
+  color: var(--color-blanco);
+  background-color: var(--color-acento);
+  border-color: var(--color-acento);
+}
+
+/* =========================================================
+   RESULTADOS Y SALIDAS DE R
+   ========================================================= */
+
+pre:not(.sourceCode) {
+  color: #24313d;
+  background-color: #f4f7f9;
+  border-color: var(--color-borde);
+  border-left-color: #7b8d9d;
+}
+
+/* =========================================================
+   CITAS Y BLOQUES DESTACADOS
+   ========================================================= */
+
+blockquote {
+  margin: 22px 0;
+  padding: 16px 20px;
+  color: #425466;
+  background-color: var(--color-claro);
+  border-left: 5px solid var(--color-acento);
+  border-radius: 0 var(--radio) var(--radio) 0;
+}
+
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Clases opcionales para resultados o notas */
+
+.nota,
+.resultado,
+.advertencia {
+  margin: 22px 0;
+  padding: 17px 20px;
+  border-radius: var(--radio);
+}
+
+.nota {
+  color: #24445f;
+  background-color: #eaf4fb;
+  border-left: 5px solid #2c7fb8;
+}
+
+.resultado {
+  color: #24533c;
+  background-color: #edf8f2;
+  border-left: 5px solid #3b8d67;
+}
+
+.advertencia {
+  color: #664d03;
+  background-color: #fff8df;
+  border-left: 5px solid #d39e00;
+}
+
+/* =========================================================
+   GRÁFICOS E IMÁGENES
+   ========================================================= */
+
+img {
+  max-width: 100%;
+  height: auto;
+  margin: 12px auto 25px;
+  border-radius: 6px;
+}
+
+.figure {
+  margin-top: 22px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.figure-caption,
+p.caption {
+  margin-top: 8px;
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+  font-style: italic;
+  text-align: center;
+}
+
+/* =========================================================
+   SEPARADORES
+   ========================================================= */
+
+hr {
+  margin: 40px 0;
+  border: 0;
+  border-top: 1px solid var(--color-borde);
+}
+
+/* =========================================================
+   SELECCIÓN DE TEXTO
+   ========================================================= */
+
+::selection {
+  color: var(--color-blanco);
+  background-color: var(--color-acento);
+}
+
+/* =========================================================
+   DISEÑO RESPONSIVE
+   ========================================================= */
+
+@media screen and (max-width: 991px) {
+  .main-container {
+    width: auto;
+    margin: 15px;
+    padding: 30px;
+  }
+
+  .tocify {
+    width: 100%;
+    max-height: none;
+    margin-bottom: 25px;
+    position: static;
+  }
+
+  h1.title {
+    font-size: 2rem;
+  }
+
+  h1 {
+    font-size: 1.65rem;
+  }
+
+  h2 {
+    font-size: 1.4rem;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  body {
+    font-size: 15px;
+  }
+
+  .main-container {
+    margin: 0;
+    padding: 22px 18px;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  h1.title {
+    font-size: 1.7rem;
+  }
+
+  h1 {
+    padding: 11px 13px;
+    font-size: 1.45rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1.12rem;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  pre {
+    padding: 14px;
+    font-size: 0.82rem;
+  }
+}
+
+/* =========================================================
+   IMPRESIÓN
+   ========================================================= */
+
+@media print {
+  body {
+    color: #000000;
+    background-color: #ffffff;
+    font-size: 11pt;
+  }
+
+  .main-container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  #TOC,
+  .tocify,
+  .btn,
+  button {
+    display: none !important;
+  }
+
+  h1 {
+    color: var(--color-principal);
+    background-color: transparent;
+    border-bottom: 2px solid var(--color-principal);
+    border-radius: 0;
+  }
+
+  pre {
+    color: #000000;
+    background-color: #f4f4f4;
+    border: 1px solid #cccccc;
+  }
+
+  table {
+    box-shadow: none;
+    page-break-inside: avoid;
+  }
+
+  a {
+    color: #000000;
+    text-decoration: none;
+  }
+}
+
+/* Elemento activo de la tabla de contenido */
+.tocify .tocify-item.tocify-focus,
+.tocify .tocify-item.tocify-focus a,
+.tocify .tocify-focus,
+.tocify .tocify-focus a,
+.tocify .list-group-item.active,
+.tocify .list-group-item.active a {
+  color: #ffffff !important;
+  background-color: #17365d !important;
+  border-left-color: #2c7fb8 !important;
+}
+
+/* Elemento activo al pasar el cursor */
+.tocify .tocify-item.tocify-focus:hover,
+.tocify .tocify-item.tocify-focus:hover a,
+.tocify .list-group-item.active:hover,
+.tocify .list-group-item.active:hover a {
+  color: #ffffff !important;
+  background-color: #245784 !important;
+}
+/* Código R con fondo claro y texto legible */
+pre.sourceCode {
+  background-color: #f7f9fb !important;
+  color: #1f2933 !important;
+  border: 1px solid #cbd5df;
+  border-left: 5px solid #2c7fb8;
+}
+
+code.sourceCode {
+  color: #1f2933 !important;
+}
+
+/* Colores de la sintaxis */
+.sourceCode .kw,
+.sourceCode .cf {
+  color: #7c3aed !important;
+}
+
+.sourceCode .fu {
+  color: #174f84 !important;
+  font-weight: 600;
+}
+
+.sourceCode .va,
+.sourceCode .ot,
+.sourceCode .dt {
+  color: #8a3b12 !important;
+}
+
+.sourceCode .st {
+  color: #2f7d00 !important;
+}
+
+.sourceCode .co {
+  color: #6b7280 !important;
+  font-style: italic;
+}
+
+.sourceCode .op {
+  color: #1f2933 !important;
+}
+.comentario-histograma {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background-color: #f4f7fa;
+  border-left: 4px solid #2c7fb8;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.espacio-histograma {
+  height: 55px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #dce3e8;
+}
+.espacio-boxplot {
+  height: 55px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #dce3e8;
+}
+/* Comentarios debajo de los gráficos */
+.comentario-grafico {
+  margin-top: 14px;
+  padding: 12px 16px;
+  background-color: #f4f7fa;
+  border-left: 4px solid #2c7fb8;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Separación general entre gráficos */
+.separador-grafico {
+  height: 55px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #dce3e8;
+}
+
+/* =========================================================
+   BOTONES DE RECURSOS DEL PROYECTO
+   ========================================================= */
+
+.recursos-proyecto {
+  margin-top: 28px;
+  padding: 26px;
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-borde);
+  border-radius: 10px;
+  box-shadow: var(--sombra-suave);
+}
+
+.recursos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.recurso-boton {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 88px;
+  padding: 16px;
+
+  color: var(--color-principal);
+  background-color: #f7f9fb;
+
+  border: 1px solid var(--color-borde);
+  border-top: 4px solid var(--color-acento);
+  border-radius: 8px;
+
+  text-decoration: none;
+  box-shadow: 0 3px 10px rgba(23, 54, 93, 0.07);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.recurso-boton:hover,
+.recurso-boton:focus {
+  color: var(--color-principal);
+  background-color: var(--color-blanco);
+  border-color: var(--color-acento);
+  text-decoration: none;
+
+  transform: translateY(-3px);
+  box-shadow: 0 8px 18px rgba(23, 54, 93, 0.14);
+}
+
+.recurso-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-borde);
+  border-radius: 9px;
+}
+
+.recurso-icono img {
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  object-fit: contain;
+  border-radius: 0;
+}
+
+.recurso-contenido {
+  display: block;
+  min-width: 0;
+}
+
+.recurso-contenido strong {
+  display: block;
+  margin-bottom: 4px;
+
+  color: var(--color-principal);
+
+  font-size: 0.98rem;
+  line-height: 1.3;
+}
+
+.recurso-contenido small {
+  display: block;
+
+  color: var(--color-texto-suave);
+
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* Tablets */
+
+@media screen and (max-width: 991px) {
+  .recursos-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Celulares */
+
+@media screen and (max-width: 600px) {
+  .recursos-proyecto {
+    padding: 18px;
+  }
+
+  .recursos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recurso-boton {
+    min-height: 80px;
+    padding: 14px;
+  }
+
+  .recurso-icono {
+    width: 46px;
+    height: 46px;
+  }
+
+  .recurso-icono img {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* Los botones no aparecen al imprimir o guardar como PDF */
+
+@media print {
+  .recursos-proyecto {
+    display: none;
+  }
+}

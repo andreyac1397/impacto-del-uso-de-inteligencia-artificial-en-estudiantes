@@ -1,0 +1,2981 @@
+---
+title: "Exploración de datos: impacto del uso de inteligencia artificial en estudiantes"
+author:
+  - "Brandon Josué Acuña Gamboa"
+  - "Desmond Akin Bermúdez Rodríguez"
+  - "Andrey Calderón Vega"
+  - "Erick Andrés Picado Mora"
+date: "03 de agosto de 2026"
+output:
+  html_document:
+    toc: true
+    toc_depth: 1
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    number_sections: true
+    df_print: paged
+    theme: flatly
+    highlight: tango
+    code_folding: show
+    css: estilos.css
+params:
+  ruta_csv: "C:/Users/andre/Documents/Cuatrimeste_ll_2026/BigData/ExploracionDatos/Proyecto/DataSet/ai_student_impact_dataset.csv"
+  
+---
+
+```{r configuracion, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  fig.width = 10,
+  fig.height = 6,
+  out.width = "95%"
+)
+
+options(scipen = 999)
+set.seed(142)
+```
+
+# Portada
+
+**Institución:** Colegio Universitario de Cartago  
+**Carrera:** Tecnologías de Información – Big Data  
+**Curso:** BD-142 Exploración de Datos  
+**Profesor:** Ronald Córdoba Vega  
+**Proyecto:** Exploración de datos y clusterización  
+**Conjunto de datos:** `ai_student_impact_dataset.csv`  
+**Fecha de entrega:** 03 de agosto de 2026  
+
+# Introducción
+
+La inteligencia artificial generativa se ha incorporado rápidamente a las actividades académicas. Los estudiantes pueden utilizarla para resumir lecturas, resolver dudas, generar borradores, obtener ideas o apoyar procesos de programación. Sin embargo, su uso también puede relacionarse con dependencia tecnológica, cambios en los hábitos de estudio, ansiedad, retención de habilidades y riesgo de agotamiento académico.
+
+Este proyecto realiza una exploración completa del conjunto de datos **Impact of AI on Students**. El trabajo incluye la lectura, revisión, limpieza y preparación de los datos; análisis univariado, bivariado y multivariado; aplicación de un Análisis de Componentes Principales (ACP); y construcción de grupos de estudiantes mediante el algoritmo K-means.
+
+El análisis describe asociaciones y perfiles presentes en los datos. Debido a que se trata de un estudio observacional, los resultados no deben interpretarse como evidencia de causalidad.
+
+# Objetivos
+
+## Objetivo general
+
+Analizar las características académicas, los hábitos de estudio y el uso de inteligencia artificial generativa en estudiantes mediante técnicas de exploración de datos, análisis multivariado y clusterización.
+
+## Objetivos específicos
+
+1. Describir la estructura y las variables del conjunto de datos.
+2. Revisar y limpiar los registros antes del análisis.
+3. Examinar la distribución de las variables numéricas y categóricas.
+4. Estudiar relaciones entre rendimiento académico, uso de IA, dependencia, ansiedad y retención de habilidades.
+5. Reducir la dimensionalidad de las variables numéricas mediante ACP.
+6. Identificar perfiles de estudiantes mediante K-means.
+7. Interpretar los resultados y reconocer las limitaciones del análisis.
+
+# Descripción del dataset
+
+## Fuente
+
+- **Nombre:** Impact of AI on Students.
+- **Archivo:** `ai_student_impact_dataset.csv`.
+- **Fuente:** Kaggle.
+- **Enlace:** <https://www.kaggle.com/datasets/laveshjadon/ai-impact-on-students>
+- **Unidad de observación:** estudiante.
+- **Cantidad esperada de registros:** 50 000.
+- **Cantidad esperada de variables:** 16.
+
+Cada fila representa a un estudiante y reúne características académicas, uso de IA generativa, hábitos de estudio, percepciones personales y resultados posteriores al semestre.
+
+## Alcance del conjunto de datos
+
+El archivo permite analizar:
+
+- Área académica y año de estudio.
+- GPA antes y después del semestre.
+- Horas semanales de uso de IA generativa.
+- Caso de uso principal de la IA.
+- Habilidad para crear instrucciones o *prompts*.
+- Diversidad de herramientas utilizadas.
+- Suscripción pagada.
+- Horas de estudio tradicional.
+- Dependencia percibida de la IA.
+- Política institucional.
+- Ansiedad durante los exámenes.
+- Retención de habilidades.
+- Riesgo de agotamiento académico.
+
+## Naturaleza de los datos
+
+El análisis utiliza la información disponible en el archivo original. Las relaciones encontradas son descriptivas y asociativas. No se puede concluir que una variable cause directamente cambios en otra.
+
+# Diccionario de variables
+
+```{r diccionario-variables}
+library(tidyverse)
+library(knitr)
+library(scales)
+library(cluster)
+library(nortest)
+
+diccionario <- tribble(
+  ~Variable, ~Tipo, ~Valores_o_rango, ~Descripcion,
+  "Student_ID", "Identificadora", "100001 a 150000", "Identificador único del estudiante.",
+  "Major_Category", "Categórica nominal", "Arts, Business, Humanities, Medical, STEM", "Área académica principal.",
+  "Year_of_Study", "Categórica ordinal", "Freshman a Graduate", "Etapa académica del estudiante.",
+  "Pre_Semester_GPA", "Numérica continua", "Aproximadamente 0 a 4", "Promedio académico antes del semestre.",
+  "Weekly_GenAI_Hours", "Numérica continua", "0 horas o más", "Horas semanales de uso de IA generativa.",
+  "Primary_Use_Case", "Categórica nominal", "Cinco categorías", "Actividad principal apoyada por IA.",
+  "Prompt_Engineering_Skill", "Categórica ordinal", "Beginner, Intermediate, Advanced", "Nivel de habilidad para construir prompts.",
+  "Tool_Diversity", "Numérica discreta", "1 a 5", "Cantidad de herramientas de IA utilizadas.",
+  "Paid_Subscription", "Lógica", "TRUE o FALSE", "Indica si tiene una suscripción pagada.",
+  "Traditional_Study_Hours", "Numérica continua", "0 horas o más", "Horas semanales de estudio sin IA.",
+  "Perceived_AI_Dependency", "Numérica ordinal", "1 a 10", "Dependencia percibida de la IA.",
+  "Institutional_Policy", "Categórica ordinal", "Strict_Ban a Actively_Encouraged", "Política institucional sobre el uso de IA.",
+  "Anxiety_Level_During_Exams", "Numérica ordinal", "1 a 10", "Ansiedad durante los exámenes.",
+  "Post_Semester_GPA", "Numérica continua", "0 a 4", "Promedio académico después del semestre.",
+  "Skill_Retention_Score", "Numérica continua", "0 a 100", "Puntaje de retención de habilidades.",
+  "Burnout_Risk_Level", "Categórica ordinal", "Low, Medium, High", "Nivel de riesgo de agotamiento académico."
+)
+
+kable(diccionario, caption = "Diccionario de variables")
+```
+
+# Librerías utilizadas
+
+```{r librerias}
+# Instalar las que hagan falta
+# install.packages(c("tidyverse", "knitr", "scales", "cluster", "nortest"))
+
+
+library(tidyverse)
+library(knitr)
+library(scales)
+library(cluster)
+library(nortest)
+```
+
+Las funciones principales utilizadas pertenecen a:
+
+- **tidyverse:** manipulación, transformación y visualización.
+- **knitr:** presentación de tablas y generación del HTML.
+- **scales:** formato de porcentajes y etiquetas.
+- **cluster:** evaluación de clústeres mediante silueta.
+- **nortest:** prueba de normalidad de Lilliefors.
+
+# Carga de los datos
+
+## Ubicación esperada
+
+La estructura del proyecto es:
+
+```text
+Proyecto/
+├── Codigos/
+│   ├── EDA_Impacto_IA_Estudiantes.Rmd
+│   └── estilos.css
+├── DataSet/
+│   └── ai_student_impact_dataset.csv
+├── Documentacion/
+└── PPT/
+```
+
+La ruta se define en el encabezado del archivo mediante el parámetro `ruta_csv`.
+
+```{r carga-datos}
+ruta_csv <- params$ruta_csv
+
+if (!file.exists(ruta_csv)) {
+  stop(
+    "No se encontró el archivo CSV en: ", ruta_csv,
+    ". Revise el nombre y la ubicación del archivo."
+  )
+}
+
+df_original <- read.csv(
+  ruta_csv,
+  header = TRUE,
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
+
+cat("Archivo cargado correctamente:", ruta_csv, "\n")
+cat(" Cantidad de filas:", nrow(df_original), "\n")
+cat("Cantidad de columnas:", ncol(df_original), "\n")
+```
+
+## Revisión inicial
+
+El conjunto de datos contiene 50 000 registros y 16 variables. De ellas, 8 son numéricas y fueron reconocidas correctamente, mientras que 6 son categóricas y se cargaron como texto, por lo que se convertirán posteriormente. Además, se identificó una variable identificadora y una variable lógica.
+
+```{r revision-inicial}
+dim(df_original)
+head(df_original)
+tail(df_original)
+str(df_original)
+colnames(df_original)
+```
+
+```{r resumen-inicial}
+resumen_inicial <- tibble(
+  Indicador = c(
+    "Cantidad de filas",
+    "Cantidad de columnas",
+    "Variables numéricas",
+    "Variables categóricas",
+    "Variables lógicas",
+    "Variables identificadoras",
+    "Valores faltantes",
+    "Filas duplicadas",
+    "Identificadores duplicados"
+  ),
+  Resultado = c(
+    nrow(df_original),
+    ncol(df_original),
+    8,
+    6,
+    1,
+    1,
+    sum(is.na(df_original)),
+    sum(duplicated(df_original)),
+    sum(duplicated(df_original$Student_ID))
+  )
+)
+
+kable(
+  resumen_inicial,
+  caption = "Resumen inicial del conjunto de datos"
+)
+```
+
+# Limpieza y preparación
+
+## Normalización de textos
+
+Se eliminan espacios innecesarios al inicio y al final de las variables de texto.
+
+```{r normalizacion-textos}
+df_limpio <- df_original %>%
+  mutate(across(where(is.character), trimws))
+```
+
+## Conversión de tipos
+
+Se convirtieron las variables al tipo correcto: numéricas, categóricas, ordinales y lógicas. Esto permite que R las interprete correctamente y que los análisis y gráficos posteriores sean confiables.
+```{r conversion-tipos}
+df_limpio <- df_limpio %>%
+  mutate(
+    Student_ID = as.integer(Student_ID),
+    Major_Category = factor(Major_Category),
+    Year_of_Study = factor(
+      Year_of_Study,
+      levels = c("Freshman", "Sophomore", "Junior", "Senior", "Graduate"),
+      ordered = TRUE
+    ),
+    Primary_Use_Case = factor(Primary_Use_Case),
+    Prompt_Engineering_Skill = factor(
+      Prompt_Engineering_Skill,
+      levels = c("Beginner", "Intermediate", "Advanced"),
+      ordered = TRUE
+    ),
+    Paid_Subscription = case_when(
+      tolower(as.character(Paid_Subscription)) %in% c("true", "1", "yes", "si", "sí") ~ TRUE,
+      tolower(as.character(Paid_Subscription)) %in% c("false", "0", "no") ~ FALSE,
+      TRUE ~ NA
+    ),
+    Institutional_Policy = Institutional_Policy %>%
+      recode("Strictly_Ban" = "Strict_Ban") %>%
+      factor(
+        levels = c("Strict_Ban", "Allowed_With_Citation", "Actively_Encouraged"),
+        ordered = TRUE
+      ),
+    Burnout_Risk_Level = factor(
+      Burnout_Risk_Level,
+      levels = c("Low", "Medium", "High"),
+      ordered = TRUE
+    )
+  )
+
+str(df_limpio)
+```
+
+## Valores faltantes
+
+Se revisó cuántos valores faltantes existen en cada variable y qué porcentaje representan. El resultado mostró que ninguna de las 16 variables contiene datos faltantes, por lo que no fue necesario eliminar registros ni aplicar imputación. Esta revisión es importante para confirmar que el dataset está completo antes del análisis.
+```{r valores-faltantes}
+faltantes_por_variable <- df_limpio %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Variable",
+    values_to = "Valores_faltantes"
+  ) %>%
+  mutate(
+    Porcentaje = Valores_faltantes / nrow(df_limpio)
+  ) %>%
+  arrange(desc(Valores_faltantes))
+
+kable(
+  faltantes_por_variable,
+  digits = 4,
+  caption = "Valores faltantes por variable"
+)
+```
+
+Los registros con valores faltantes se excluyen del análisis porque el archivo original se espera completo y la cantidad de observaciones es amplia.
+
+```{r eliminar-faltantes}
+filas_antes_faltantes <- nrow(df_limpio)
+
+df_limpio <- df_limpio %>%
+  drop_na()
+
+filas_eliminadas_faltantes <- filas_antes_faltantes - nrow(df_limpio)
+filas_eliminadas_faltantes
+```
+
+## Registros duplicados
+
+Se revisaron los registros duplicados para evitar que afectaran los resultados del análisis. No se encontraron filas ni identificadores repetidos, por lo que no fue necesario eliminar datos.
+```{r duplicados}
+duplicados_completos <- sum(duplicated(df_limpio))
+duplicados_id <- sum(duplicated(df_limpio$Student_ID))
+
+tibble(
+  Tipo = c("Filas completamente duplicadas", "Student_ID duplicados"),
+  Cantidad = c(duplicados_completos, duplicados_id)
+) %>%
+  kable(caption = "Revisión de duplicados")
+```
+
+
+## Validación de rangos
+
+Se validaron los rangos de las variables numéricas y todos los valores se encontraron dentro de los límites esperados.
+```{r validacion-rangos}
+validacion_rangos <- tibble(
+  Regla = c(
+    "Pre_Semester_GPA entre 0 y 4",
+    "Post_Semester_GPA entre 0 y 4",
+    "Weekly_GenAI_Hours mayor o igual a 0",
+    "Traditional_Study_Hours mayor o igual a 0",
+    "Tool_Diversity entre 1 y 5",
+    "Perceived_AI_Dependency entre 1 y 10",
+    "Anxiety_Level_During_Exams entre 1 y 10",
+    "Skill_Retention_Score entre 0 y 100"
+  ),
+  Registros_invalidos = c(
+    sum(!between(df_limpio$Pre_Semester_GPA, 0, 4)),
+    sum(!between(df_limpio$Post_Semester_GPA, 0, 4)),
+    sum(df_limpio$Weekly_GenAI_Hours < 0),
+    sum(df_limpio$Traditional_Study_Hours < 0),
+    sum(!between(df_limpio$Tool_Diversity, 1, 5)),
+    sum(!between(df_limpio$Perceived_AI_Dependency, 1, 10)),
+    sum(!between(df_limpio$Anxiety_Level_During_Exams, 1, 10)),
+    sum(!between(df_limpio$Skill_Retention_Score, 0, 100))
+  )
+)
+
+kable(validacion_rangos, caption = "Validación de rangos esperados")
+```
+
+**En caso de encontrarse valores fuera de los rangos esperados, se revisarían antes de decidir su corrección o exclusión.**
+
+## Valores atípicos
+
+Se identificaron valores atípicos mediante el rango intercuartílico. La mayor cantidad se encontró en las horas semanales de uso de IA, con 2583 casos. Estos valores se conservaron porque se encuentran dentro de rangos válidos y pueden representar comportamientos reales.
+
+```{r deteccion-atipicos}
+variables_continuas <- c(
+  "Pre_Semester_GPA",
+  "Weekly_GenAI_Hours",
+  "Traditional_Study_Hours",
+  "Post_Semester_GPA",
+  "Skill_Retention_Score"
+)
+
+contar_atipicos <- function(x) {
+  q1 <- quantile(x, 0.25, na.rm = TRUE)
+  q3 <- quantile(x, 0.75, na.rm = TRUE)
+  iqr <- IQR(x, na.rm = TRUE)
+  inferior <- q1 - 1.5 * iqr
+  superior <- q3 + 1.5 * iqr
+
+  tibble(
+    Limite_inferior = inferior,
+    Limite_superior = superior,
+    Cantidad_atipicos = sum(x < inferior | x > superior, na.rm = TRUE)
+  )
+}
+
+tabla_atipicos <- map_dfr(
+  variables_continuas,
+  ~ contar_atipicos(df_limpio[[.x]]) %>%
+    mutate(Variable = .x, .before = 1)
+)
+
+kable(tabla_atipicos, digits = 3, caption = "Valores atípicos por variable")
+```
+
+## Resultado de la limpieza
+
+El conjunto de datos no presentó valores faltantes, duplicados ni valores fuera de rango. Por lo tanto, se conservaron las 50 000 filas y las 16 variables para continuar con el análisis.
+```{r resultado-limpieza}
+resumen_limpieza <- tibble(
+  Indicador = c(
+    "Filas originales",
+    "Valores faltantes",
+    "Filas duplicadas",
+    "Valores fuera de rango",
+    "Filas finales",
+    "Columnas finales"
+  ),
+  Cantidad = c(
+    nrow(df_original),
+    sum(faltantes_por_variable$Valores_faltantes),
+    duplicados_completos,
+    sum(validacion_rangos$Registros_invalidos),
+    nrow(df_limpio),
+    ncol(df_limpio)
+  )
+)
+
+kable(
+  resumen_limpieza,
+  caption = "Resultado del proceso de limpieza"
+)
+```
+
+# Clasificación de variables
+
+Las variables se clasificaron según su tipo para seleccionar correctamente los análisis estadísticos y gráficos. Student_ID se utiliza únicamente como identificador y no participa en los cálculos.
+
+```{r clasificacion-variables}
+variables_numericas_continuas <- c(
+  "Pre_Semester_GPA",
+  "Weekly_GenAI_Hours",
+  "Traditional_Study_Hours",
+  "Post_Semester_GPA",
+  "Skill_Retention_Score"
+)
+
+variables_numericas_discretas <- c(
+  "Tool_Diversity",
+  "Perceived_AI_Dependency",
+  "Anxiety_Level_During_Exams"
+)
+
+variables_categoricas_nominales <- c(
+  "Major_Category",
+  "Primary_Use_Case"
+)
+
+variables_categoricas_ordinales <- c(
+  "Year_of_Study",
+  "Prompt_Engineering_Skill",
+  "Institutional_Policy",
+  "Burnout_Risk_Level"
+)
+
+variable_logica <- "Paid_Subscription"
+
+clasificacion <- tibble(
+  Clasificacion = c(
+    "Numéricas continuas",
+    "Numéricas discretas u ordinales",
+    "Categóricas nominales",
+    "Categóricas ordinales",
+    "Lógica",
+    "Identificadora"
+  ),
+  Variables = c(
+    paste(variables_numericas_continuas, collapse = ", "),
+    paste(variables_numericas_discretas, collapse = ", "),
+    paste(variables_categoricas_nominales, collapse = ", "),
+    paste(variables_categoricas_ordinales, collapse = ", "),
+    variable_logica,
+    "Student_ID"
+  )
+)
+
+kable(clasificacion, caption = "Clasificación de las variables")
+```
+
+# Análisis univariado
+
+## Variables numéricas
+
+Se calcularon medidas de posición y dispersión para conocer el comportamiento de las variables numéricas, incluyendo mínimo, máximo, media, mediana, cuartiles, desviación estándar, varianza y rango intercuartílico.
+```{r resumen-numerico}
+variables_numericas <- c(
+  variables_numericas_continuas,
+  variables_numericas_discretas
+)
+
+resumen_numerico <- df_limpio %>%
+  select(all_of(variables_numericas)) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Variable",
+    values_to = "Valor"
+  ) %>%
+  group_by(Variable) %>%
+  summarise(
+    N = n(),
+    Minimo = min(Valor),
+    Q1 = quantile(Valor, 0.25),
+    Media = mean(Valor),
+    Mediana = median(Valor),
+    Q3 = quantile(Valor, 0.75),
+    Maximo = max(Valor),
+    Desviacion = sd(Valor),
+    Varianza = var(Valor),
+    IQR = IQR(Valor),
+    .groups = "drop"
+  )
+
+kable(
+  resumen_numerico,
+  digits = 3,
+  caption = "Estadísticos descriptivos de las variables numéricas"
+)
+```
+Los resultados muestran que el promedio posterior al semestre fue de 3,349, superior al promedio previo de 3,146. El uso semanal de IA presentó una media de 8,428 horas y una mediana de 5,8 horas, lo que indica que algunos estudiantes registran un uso considerablemente mayor. El puntaje promedio de retención de habilidades fue de 75,798.
+
+
+### Histogramas
+
+Se utilizaron histogramas para observar la distribución de las variables numéricas continuas. La línea discontinua representa la media de cada variable.
+
+### Histogramas
+
+Se utilizaron histogramas para observar la distribución de las variables numéricas continuas. La línea discontinua representa la media de cada variable.
+
+```{r histogramas-numericos, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+etiquetas_variables <- c(
+  Pre_Semester_GPA = "Promedio previo al semestre",
+  Weekly_GenAI_Hours = "Horas semanales de uso de IA",
+  Traditional_Study_Hours = "Horas de estudio tradicional",
+  Post_Semester_GPA = "Promedio posterior al semestre",
+  Skill_Retention_Score = "Puntaje de retención de habilidades"
+)
+
+comentarios_histogramas <- c(
+  Pre_Semester_GPA =
+    "La mayoría de los estudiantes presenta promedios altos, con pocos casos en valores bajos.",
+
+  Weekly_GenAI_Hours =
+    "Predominan pocas horas de uso de IA, aunque algunos estudiantes alcanzan valores elevados.",
+
+  Traditional_Study_Hours =
+    "Los datos se concentran cerca de 11 horas y presentan una distribución aproximadamente simétrica.",
+
+  Post_Semester_GPA =
+    "Los promedios se concentran en valores altos, con una acumulación importante en la calificación máxima de 4.",
+
+  Skill_Retention_Score =
+    "La mayoría de los puntajes se concentra alrededor de 76 puntos, con varios estudiantes que alcanzan 100."
+)
+
+for (variable in variables_numericas_continuas) {
+
+  grafico <- ggplot(df_limpio, aes(x = .data[[variable]])) +
+    geom_histogram(
+      bins = 35,
+      fill = "#2C7FB8",
+      color = "white"
+    ) +
+    geom_vline(
+      xintercept = mean(df_limpio[[variable]], na.rm = TRUE),
+      linetype = "dashed",
+      linewidth = 0.8
+    ) +
+    labs(
+      title = paste("Distribución de", etiquetas_variables[[variable]]),
+      subtitle = "La línea discontinua representa la media",
+      x = etiquetas_variables[[variable]],
+      y = "Frecuencia"
+    ) +
+    theme_minimal()
+
+  print(grafico)
+
+  cat(
+    paste0(
+      "\n<div class='comentario-histograma'>",
+      comentarios_histogramas[[variable]],
+      "</div>",
+      "<div class='espacio-histograma'></div>\n"
+    )
+  )
+}
+```
+
+Las distribuciones permiten observar diferencias en la concentración y dispersión de los datos. Las horas semanales de uso de IA presentan una mayor acumulación en valores bajos y algunos casos con uso elevado.
+
+### Boxplots
+
+Se utilizaron diagramas de caja para observar la mediana, la dispersión y los posibles valores atípicos de las variables numéricas continuas.
+
+```{r boxplots-numericos, fig.height=4, fig.show='asis', results='asis'}
+for (variable in variables_numericas_continuas) {
+
+  grafico <- ggplot(df_limpio, aes(y = .data[[variable]])) +
+    geom_boxplot(
+      fill = "#7FCDBB",
+      outlier.alpha = 0.35
+    ) +
+    labs(
+      title = paste(
+        "Diagrama de caja de",
+        etiquetas_variables[[variable]]
+      ),
+      x = "",
+      y = etiquetas_variables[[variable]]
+    ) +
+    theme_minimal()
+
+  print(grafico)
+
+  cat("\n<div class='espacio-boxplot'></div>\n")
+}
+```
+
+Los boxplots confirmaron la presencia de algunos valores atípicos, principalmente en las horas semanales de uso de IA. Estos valores se conservaron porque se encuentran dentro de rangos válidos.
+
+### Evaluación de normalidad
+
+Se aplicó la prueba de Lilliefors para evaluar la normalidad de las variables continuas. Un valor p menor a 0,05 indica que la variable no sigue una distribución normal.
+
+```{r normalidad}
+set.seed(142)
+
+normalidad <- map_dfr(
+  variables_numericas_continuas,
+  function(variable) {
+    valores <- na.omit(df_limpio[[variable]])
+
+    if (length(valores) > 5000) {
+      valores <- sample(valores, 5000)
+    }
+
+    prueba <- lillie.test(valores)
+
+    tibble(
+      Variable = etiquetas_variables[[variable]],
+      D = as.numeric(prueba$statistic),
+      P_valor = prueba$p.value,
+      Decision = if_else(
+        prueba$p.value < 0.05,
+        "Se rechaza normalidad",
+        "No se rechaza normalidad"
+      )
+    )
+  }
+)
+
+kable(normalidad, digits = 5, caption = "Prueba de normalidad de Lilliefors")
+```
+Los resultados rechazaron la normalidad en las variables evaluadas, por lo que en los análisis posteriores se prefieren métodos no paramétricos, como la correlación de Spearman.
+
+### Gráficos Q-Q
+
+Los gráficos Q-Q comparan los datos observados con una distribución normal. Cuando los puntos se mantienen cerca de la línea, la variable presenta un comportamiento aproximadamente normal.
+
+```{r etiquetas-visibles, include=FALSE}
+# Se agregan las traducciones que faltan al objeto creado anteriormente.
+etiquetas_variables[c(
+  "Tool_Diversity",
+  "Perceived_AI_Dependency",
+  "Anxiety_Level_During_Exams",
+  "Major_Category",
+  "Year_of_Study",
+  "Primary_Use_Case",
+  "Prompt_Engineering_Skill",
+  "Paid_Subscription",
+  "Institutional_Policy",
+  "Burnout_Risk_Level",
+  "Student_ID"
+)] <- c(
+  "Diversidad de herramientas",
+  "Dependencia percibida de la IA",
+  "Ansiedad durante los exámenes",
+  "Área académica",
+  "Año de estudio",
+  "Uso principal de la IA",
+  "Habilidad en creación de prompts",
+  "Suscripción de pago",
+  "Política institucional",
+  "Nivel de riesgo de agotamiento",
+  "Identificador del estudiante"
+)
+
+# Devuelve el nombre en español de una variable.
+nombre_variable <- function(variable) {
+  if (variable %in% names(etiquetas_variables)) {
+    etiquetas_variables[[variable]]
+  } else {
+    variable
+  }
+}
+
+# Traducción de las categorías visibles.
+etiquetas_categorias <- c(
+  "Arts" = "Artes",
+  "Business" = "Negocios",
+  "Humanities" = "Humanidades",
+  "Medical" = "Medicina",
+  "STEM" = "STEM",
+
+  "Freshman" = "Primer año",
+  "Sophomore" = "Segundo año",
+  "Junior" = "Tercer año",
+  "Senior" = "Cuarto año",
+  "Graduate" = "Posgrado",
+
+  "Copywriting/Drafting" = "Redacción y borradores",
+  "Debugging/Troubleshooting" = "Depuración y solución de problemas",
+  "Direct_Answer_Generation" = "Generación de respuestas directas",
+  "Ideation" = "Generación de ideas",
+  "Summarizing_Reading" = "Resumen de lecturas",
+
+  "Beginner" = "Principiante",
+  "Intermediate" = "Intermedio",
+  "Advanced" = "Avanzado",
+
+  "Strict_Ban" = "Prohibición estricta",
+  "Strictly_Ban" = "Prohibición estricta",
+  "Allowed_With_Citation" = "Permitido con citación",
+  "Actively_Encouraged" = "Promovido activamente",
+
+  "Low" = "Bajo",
+  "Medium" = "Medio",
+  "High" = "Alto",
+
+  "TRUE" = "Sí",
+  "FALSE" = "No"
+)
+
+traducir_categoria <- function(x) {
+  valor_original <- as.character(x)
+  valor_traducido <- unname(etiquetas_categorias[valor_original])
+
+  ifelse(
+    is.na(valor_traducido),
+    valor_original,
+    valor_traducido
+  )
+}
+```
+
+```{r graficos-qq, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+set.seed(142)
+
+for (variable in variables_numericas_continuas) {
+
+  datos_qq <- df_limpio %>%
+    select(all_of(variable)) %>%
+    drop_na()
+
+  if (nrow(datos_qq) > 5000) {
+    datos_qq <- slice_sample(datos_qq, n = 5000)
+  }
+
+  grafico <- ggplot(
+    datos_qq,
+    aes(sample = .data[[variable]])
+  ) +
+    stat_qq(alpha = 0.45) +
+    stat_qq_line(linewidth = 0.9) +
+    labs(
+      title = paste(
+        "Gráfico Q-Q de",
+        nombre_variable(variable)
+      ),
+      x = "Cuantiles teóricos",
+      y = "Cuantiles observados"
+    ) +
+    theme_minimal()
+
+  print(grafico)
+
+  cat("\n<div class='separador-grafico'></div>\n")
+}
+```
+
+Los puntos se alejan de la línea teórica en distintas partes de los gráficos, especialmente en los extremos. Esto respalda los resultados de Lilliefors e indica que las variables no presentan una distribución normal perfecta.
+
+## Variables categóricas
+
+Se calcularon las frecuencias y porcentajes de las variables categóricas para identificar cuáles categorías predominan en el conjunto de datos.
+
+```{r frecuencias-categoricas}
+variables_categoricas <- c(
+  variables_categoricas_nominales,
+  variables_categoricas_ordinales,
+  variable_logica
+)
+
+frecuencias_categoricas <- map_dfr(
+  variables_categoricas,
+  function(variable) {
+
+    df_limpio %>%
+      transmute(
+        Categoria = traducir_categoria(.data[[variable]])
+      ) %>%
+      count(
+        Categoria,
+        name = "Frecuencia"
+      ) %>%
+      mutate(
+        Variable = nombre_variable(variable),
+        Porcentaje = percent(
+          Frecuencia / sum(Frecuencia),
+          accuracy = 0.1
+        )
+      ) %>%
+      select(
+        Variable,
+        Categoria,
+        Frecuencia,
+        Porcentaje
+      )
+  }
+) %>%
+  arrange(
+    Variable,
+    desc(Frecuencia)
+  )
+
+kable(
+  frecuencias_categoricas,
+  caption = "Frecuencias de las variables categóricas"
+)
+```
+
+### Gráficos de las variables categóricas
+
+Los gráficos de barras permiten comparar visualmente la cantidad y el porcentaje de estudiantes en cada categoría.
+
+```{r graficos-categoricos, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+for (variable in variables_categoricas) {
+
+  tabla <- df_limpio %>%
+    transmute(
+      Categoria = traducir_categoria(.data[[variable]])
+    ) %>%
+    count(
+      Categoria,
+      name = "Frecuencia"
+    ) %>%
+    mutate(
+      Porcentaje = Frecuencia / sum(Frecuencia),
+      Categoria = forcats::fct_reorder(
+        as.factor(Categoria),
+        Frecuencia
+      )
+    )
+
+  grafico <- ggplot(
+    tabla,
+    aes(
+      x = Categoria,
+      y = Frecuencia
+    )
+  ) +
+    geom_col(fill = "#225EA8") +
+    geom_text(
+      aes(
+        label = percent(
+          Porcentaje,
+          accuracy = 0.1
+        )
+      ),
+      hjust = -0.1,
+      size = 3.5
+    ) +
+    coord_flip() +
+    expand_limits(
+      y = max(tabla$Frecuencia) * 1.18
+    ) +
+    labs(
+      title = paste(
+        "Distribución de",
+        nombre_variable(variable)
+      ),
+      x = "",
+      y = "Frecuencia"
+    ) +
+    theme_minimal()
+
+  print(grafico)
+
+  categoria_principal <- tabla %>%
+    slice_max(
+      order_by = Frecuencia,
+      n = 1,
+      with_ties = FALSE
+    )
+
+  cat(
+    paste0(
+      "\n<div class='comentario-grafico'>",
+      "La categoría con mayor frecuencia fue <strong>",
+      as.character(categoria_principal$Categoria),
+      "</strong>, con ",
+      percent(
+        categoria_principal$Porcentaje,
+        accuracy = 0.1
+      ),
+      " de los estudiantes.",
+      "</div>\n"
+    )
+  )
+
+  cat("\n<div class='separador-grafico'></div>\n")
+}
+```
+
+## Interpretación univariada
+
+El análisis univariado mostró que las variables continuas no presentan una distribución normal perfecta y contienen algunos valores atípicos válidos. En las variables categóricas se identificaron diferencias en la frecuencia de sus categorías. Estos resultados permiten seleccionar adecuadamente las técnicas estadísticas utilizadas en los análisis posteriores.
+
+
+# Análisis bivariado
+
+El análisis bivariado permite estudiar la relación entre dos variables. La técnica aplicada depende de si las variables son numéricas, categóricas o una combinación de ambas.
+
+```{r funciones-bivariadas, include=FALSE}
+# Interpreta la intensidad y dirección de una correlación.
+interpretar_correlacion <- function(valor) {
+  intensidad <- case_when(
+    abs(valor) < 0.20 ~ "muy débil",
+    abs(valor) < 0.40 ~ "débil",
+    abs(valor) < 0.60 ~ "moderada",
+    abs(valor) < 0.80 ~ "fuerte",
+    TRUE ~ "muy fuerte"
+  )
+
+  direccion <- case_when(
+    valor > 0 ~ "positiva",
+    valor < 0 ~ "negativa",
+    TRUE ~ "nula"
+  )
+
+  paste(intensidad, direccion)
+}
+
+# Interpreta la intensidad de la V de Cramer.
+interpretar_v_cramer <- function(valor) {
+  case_when(
+    valor < 0.10 ~ "muy débil",
+    valor < 0.30 ~ "débil",
+    valor < 0.50 ~ "moderada",
+    TRUE ~ "fuerte"
+  )
+}
+
+# Interpreta el tamaño del efecto de Kruskal-Wallis.
+interpretar_epsilon <- function(valor) {
+  case_when(
+    valor < 0.01 ~ "insignificante",
+    valor < 0.06 ~ "pequeño",
+    valor < 0.14 ~ "moderado",
+    TRUE ~ "grande"
+  )
+}
+
+# Traduce categorías y conserva su orden original.
+factor_traducido <- function(x) {
+  if (is.factor(x)) {
+    factor(
+      traducir_categoria(x),
+      levels = traducir_categoria(levels(x)),
+      ordered = is.ordered(x)
+    )
+  } else if (is.logical(x)) {
+    factor(
+      traducir_categoria(x),
+      levels = c("No", "Sí")
+    )
+  } else {
+    factor(traducir_categoria(x))
+  }
+}
+```
+
+## Variables numéricas frente a numéricas
+
+Las correlaciones permiten medir la dirección y la intensidad de la relación entre variables numéricas. Sus valores se encuentran entre -1 y 1.
+
+### Correlación de Pearson
+
+La correlación de Pearson mide relaciones lineales. Se conserva como referencia comparativa, aunque debe interpretarse con precaución porque las variables no presentan normalidad.
+
+```{r correlacion-pearson, fig.height=6}
+matriz_pearson <- cor(
+  df_limpio %>%
+    select(all_of(variables_numericas_continuas)),
+  method = "pearson",
+  use = "pairwise.complete.obs"
+)
+
+orden_pearson <- vapply(
+  variables_numericas_continuas,
+  nombre_variable,
+  character(1)
+)
+
+tabla_pearson <- as.data.frame(
+  as.table(matriz_pearson)
+) %>%
+  mutate(
+    Var1 = factor(
+      vapply(as.character(Var1), nombre_variable, character(1)),
+      levels = orden_pearson
+    ),
+    Var2 = factor(
+      vapply(as.character(Var2), nombre_variable, character(1)),
+      levels = orden_pearson
+    )
+  )
+
+ggplot(
+  tabla_pearson,
+  aes(Var1, Var2, fill = Freq)
+) +
+  geom_tile() +
+  geom_text(
+    aes(label = round(Freq, 2)),
+    size = 3.4
+  ) +
+  scale_fill_gradient2(
+    low = "#B2182B",
+    mid = "white",
+    high = "#2166AC",
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  labs(
+    title = "Matriz de correlación de Pearson",
+    subtitle = "Relaciones lineales entre variables continuas",
+    x = "",
+    y = "",
+    fill = "Correlación"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )
+```
+
+Pearson se presenta únicamente como comparación. Debido a los resultados de normalidad, Spearman será el método principal para interpretar las relaciones.
+
+### Correlación de Spearman
+
+Spearman mide relaciones crecientes o decrecientes sin exigir normalidad, por lo que es la correlación principal utilizada en este análisis.
+
+```{r correlacion-spearman, fig.height=7, results='asis'}
+matriz_spearman <- cor(
+  df_limpio %>%
+    select(all_of(variables_numericas)),
+  method = "spearman",
+  use = "pairwise.complete.obs"
+)
+
+orden_spearman <- vapply(
+  variables_numericas,
+  nombre_variable,
+  character(1)
+)
+
+tabla_spearman <- as.data.frame(
+  as.table(matriz_spearman)
+) %>%
+  mutate(
+    Var1 = factor(
+      vapply(as.character(Var1), nombre_variable, character(1)),
+      levels = orden_spearman
+    ),
+    Var2 = factor(
+      vapply(as.character(Var2), nombre_variable, character(1)),
+      levels = orden_spearman
+    )
+  )
+
+grafico_spearman <- ggplot(
+  tabla_spearman,
+  aes(Var1, Var2, fill = Freq)
+) +
+  geom_tile() +
+  geom_text(
+    aes(label = round(Freq, 2)),
+    size = 3
+  ) +
+  scale_fill_gradient2(
+    low = "#B2182B",
+    mid = "white",
+    high = "#2166AC",
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  labs(
+    title = "Matriz de correlación de Spearman",
+    subtitle = "Relaciones monotónicas entre las variables numéricas",
+    x = "",
+    y = "",
+    fill = "Correlación"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )
+
+print(grafico_spearman)
+
+matriz_sin_diagonal <- matriz_spearman
+diag(matriz_sin_diagonal) <- NA
+
+indice_mayor <- which(
+  abs(matriz_sin_diagonal) ==
+    max(abs(matriz_sin_diagonal), na.rm = TRUE),
+  arr.ind = TRUE
+)[1, ]
+
+variable_mayor_1 <- rownames(
+  matriz_sin_diagonal
+)[indice_mayor[1]]
+
+variable_mayor_2 <- colnames(
+  matriz_sin_diagonal
+)[indice_mayor[2]]
+
+correlacion_mayor <- matriz_sin_diagonal[
+  indice_mayor[1],
+  indice_mayor[2]
+]
+
+cat(
+  paste0(
+    "\n<div class='comentario-grafico'>",
+    "La relación más intensa se observó entre <strong>",
+    nombre_variable(variable_mayor_1),
+    "</strong> y <strong>",
+    nombre_variable(variable_mayor_2),
+    "</strong>, con una correlación de ",
+    round(correlacion_mayor, 3),
+    ", considerada ",
+    interpretar_correlacion(correlacion_mayor),
+    ".",
+    "</div>\n"
+  )
+)
+```
+
+### Relaciones seleccionadas
+
+Los diagramas de dispersión permiten observar algunas relaciones relevantes. Se utiliza una muestra de 5 000 registros para mantener los gráficos legibles.
+
+```{r dispersiones-seleccionadas, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+pares_numericos <- list(
+  c(
+    "Pre_Semester_GPA",
+    "Post_Semester_GPA"
+  ),
+  c(
+    "Weekly_GenAI_Hours",
+    "Post_Semester_GPA"
+  ),
+  c(
+    "Weekly_GenAI_Hours",
+    "Skill_Retention_Score"
+  ),
+  c(
+    "Traditional_Study_Hours",
+    "Post_Semester_GPA"
+  ),
+  c(
+    "Perceived_AI_Dependency",
+    "Anxiety_Level_During_Exams"
+  )
+)
+
+set.seed(142)
+
+muestra_graficos <- df_limpio %>%
+  slice_sample(
+    n = min(5000, nrow(df_limpio))
+  )
+
+for (par in pares_numericos) {
+
+  variable_x <- par[1]
+  variable_y <- par[2]
+
+  grafico <- ggplot(
+    muestra_graficos,
+    aes(
+      x = .data[[variable_x]],
+      y = .data[[variable_y]]
+    )
+  ) +
+    geom_point(
+      alpha = 0.20,
+      size = 0.8
+    ) +
+    geom_smooth(
+      method = "loess",
+      formula = y ~ x,
+      se = FALSE,
+      linewidth = 0.9
+    ) +
+    labs(
+      title = paste(
+        nombre_variable(variable_y),
+        "según",
+        nombre_variable(variable_x)
+      ),
+      subtitle = "La línea representa la tendencia general",
+      x = nombre_variable(variable_x),
+      y = nombre_variable(variable_y)
+    ) +
+    theme_minimal()
+
+  print(grafico)
+
+  correlacion_par <- cor(
+    df_limpio[[variable_x]],
+    df_limpio[[variable_y]],
+    method = "spearman",
+    use = "complete.obs"
+  )
+
+  cat(
+    paste0(
+      "\n<div class='comentario-grafico'>",
+      "La correlación de Spearman fue ",
+      round(correlacion_par, 3),
+      ", lo que representa una relación ",
+      interpretar_correlacion(correlacion_par),
+      ".",
+      "</div>\n"
+    )
+  )
+
+  cat(
+    "\n<div class='separador-grafico'></div>\n"
+  )
+}
+```
+
+## Variables categóricas frente a categóricas
+
+La prueba chi-cuadrado permite determinar si existe asociación entre dos variables categóricas. La V de Cramer indica qué tan intensa es esa asociación.
+
+```{r funcion-chi-cuadrado}
+analizar_categoricas <- function(
+    datos,
+    variable_1,
+    variable_2
+) {
+
+  tabla <- table(
+    datos[[variable_1]],
+    datos[[variable_2]]
+  )
+
+  prueba <- chisq.test(
+    tabla,
+    correct = FALSE
+  )
+
+  n <- sum(tabla)
+
+  minimo_dimension <- min(
+    nrow(tabla) - 1,
+    ncol(tabla) - 1
+  )
+
+  v_cramer <- sqrt(
+    as.numeric(prueba$statistic) /
+      (n * minimo_dimension)
+  )
+
+  tibble(
+    Variable_1 = nombre_variable(variable_1),
+    Variable_2 = nombre_variable(variable_2),
+    Chi_cuadrado = as.numeric(prueba$statistic),
+    Grados_libertad = as.numeric(prueba$parameter),
+    P_valor = prueba$p.value,
+    V_Cramer = v_cramer,
+    Intensidad = interpretar_v_cramer(v_cramer),
+    Decision = if_else(
+      prueba$p.value < 0.05,
+      "Existe evidencia de asociación",
+      "No existe evidencia suficiente"
+    )
+  )
+}
+
+pares_categoricos <- list(
+  c(
+    "Major_Category",
+    "Primary_Use_Case"
+  ),
+  c(
+    "Prompt_Engineering_Skill",
+    "Paid_Subscription"
+  ),
+  c(
+    "Institutional_Policy",
+    "Burnout_Risk_Level"
+  ),
+  c(
+    "Year_of_Study",
+    "Burnout_Risk_Level"
+  ),
+  c(
+    "Primary_Use_Case",
+    "Burnout_Risk_Level"
+  )
+)
+
+resultados_chi <- map_dfr(
+  pares_categoricos,
+  ~ analizar_categoricas(
+    df_limpio,
+    .x[1],
+    .x[2]
+  )
+)
+
+kable(
+  resultados_chi,
+  digits = 5,
+  caption = "Pruebas chi-cuadrado y V de Cramer"
+)
+```
+
+El valor p indica si existe evidencia estadística de asociación, mientras que la V de Cramer permite conocer si dicha asociación es débil, moderada o fuerte.
+
+### Mapas de frecuencias categóricas
+
+Los mapas muestran en qué combinaciones de categorías se concentra la mayor cantidad de estudiantes.
+
+```{r mapas-categoricos-seleccionados, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+for (i in seq_along(pares_categoricos)) {
+
+  par <- pares_categoricos[[i]]
+
+  tabla <- df_limpio %>%
+    transmute(
+      Categoria_1 = factor_traducido(
+        .data[[par[1]]]
+      ),
+      Categoria_2 = factor_traducido(
+        .data[[par[2]]]
+      )
+    ) %>%
+    count(
+      Categoria_1,
+      Categoria_2,
+      name = "Frecuencia"
+    )
+
+  grafico <- ggplot(
+    tabla,
+    aes(
+      x = Categoria_2,
+      y = Categoria_1,
+      fill = Frecuencia
+    )
+  ) +
+    geom_tile() +
+    geom_text(
+      aes(label = Frecuencia),
+      size = 3
+    ) +
+    scale_fill_gradient(
+      low = "white",
+      high = "#225EA8"
+    ) +
+    labs(
+      title = paste(
+        nombre_variable(par[1]),
+        "y",
+        nombre_variable(par[2])
+      ),
+      x = nombre_variable(par[2]),
+      y = nombre_variable(par[1]),
+      fill = "Frecuencia"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(
+        angle = 35,
+        hjust = 1
+      )
+    )
+
+  print(grafico)
+
+  combinacion_principal <- tabla %>%
+    slice_max(
+      order_by = Frecuencia,
+      n = 1,
+      with_ties = FALSE
+    )
+
+  resultado <- resultados_chi[i, ]
+
+  cat(
+    paste0(
+      "\n<div class='comentario-grafico'>",
+      "La combinación más frecuente fue <strong>",
+      combinacion_principal$Categoria_1[[1]],
+      "</strong> con <strong>",
+      combinacion_principal$Categoria_2[[1]],
+      "</strong>. La V de Cramer fue ",
+      round(resultado$V_Cramer[[1]], 3),
+      ", lo que indica una asociación ",
+      resultado$Intensidad[[1]],
+      ".",
+      "</div>\n"
+    )
+  )
+
+  cat(
+    "\n<div class='separador-grafico'></div>\n"
+  )
+}
+```
+
+## Variables numéricas frente a categóricas
+
+Debido a que las variables numéricas no presentan normalidad, se utiliza Kruskal-Wallis para comprobar si sus distribuciones cambian entre las categorías de otra variable.
+
+```{r funcion-kruskal}
+analizar_kruskal <- function(
+    datos,
+    numerica,
+    categorica
+) {
+
+  datos_prueba <- datos %>%
+    select(
+      all_of(c(numerica, categorica))
+    ) %>%
+    drop_na()
+
+  formula_prueba <- reformulate(
+    categorica,
+    response = numerica
+  )
+
+  prueba <- kruskal.test(
+    formula_prueba,
+    data = datos_prueba
+  )
+
+  cantidad_grupos <- n_distinct(
+    datos_prueba[[categorica]]
+  )
+
+  cantidad_registros <- nrow(datos_prueba)
+
+  epsilon_cuadrado <- max(
+    0,
+    (
+      as.numeric(prueba$statistic) -
+        cantidad_grupos + 1
+    ) /
+      (
+        cantidad_registros -
+          cantidad_grupos
+      )
+  )
+
+  tibble(
+    Variable_numerica = nombre_variable(numerica),
+    Variable_categorica = nombre_variable(categorica),
+    Chi_cuadrado = as.numeric(prueba$statistic),
+    Grados_libertad = as.numeric(prueba$parameter),
+    P_valor = prueba$p.value,
+    Epsilon_cuadrado = epsilon_cuadrado,
+    Tamano_efecto = interpretar_epsilon(
+      epsilon_cuadrado
+    ),
+    Decision = if_else(
+      prueba$p.value < 0.05,
+      "Existen diferencias entre grupos",
+      "No existe evidencia suficiente de diferencias"
+    )
+  )
+}
+
+comparaciones_mixtas <- list(
+  c(
+    "Post_Semester_GPA",
+    "Burnout_Risk_Level"
+  ),
+  c(
+    "Weekly_GenAI_Hours",
+    "Major_Category"
+  ),
+  c(
+    "Skill_Retention_Score",
+    "Prompt_Engineering_Skill"
+  ),
+  c(
+    "Anxiety_Level_During_Exams",
+    "Institutional_Policy"
+  )
+)
+
+resultados_kruskal <- map_dfr(
+  comparaciones_mixtas,
+  ~ analizar_kruskal(
+    df_limpio,
+    .x[1],
+    .x[2]
+  )
+)
+
+kable(
+  resultados_kruskal,
+  digits = 5,
+  caption = "Pruebas de Kruskal-Wallis"
+)
+```
+
+Kruskal-Wallis indica si existen diferencias generales entre los grupos. El epsilon cuadrado permite conocer si esas diferencias tienen un efecto insignificante, pequeño, moderado o grande.
+
+### Diagramas de caja por categorías
+
+Los diagramas comparan visualmente la mediana, dispersión y valores atípicos de cada grupo.
+
+```{r boxplots-mixtos, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+for (i in seq_along(comparaciones_mixtas)) {
+
+  par <- comparaciones_mixtas[[i]]
+
+  variable_numerica <- par[1]
+  variable_categorica <- par[2]
+
+  grafico <- ggplot(
+    df_limpio,
+    aes(
+      x = .data[[variable_categorica]],
+      y = .data[[variable_numerica]]
+    )
+  ) +
+    geom_boxplot(
+      fill = "#7FCDBB",
+      outlier.alpha = 0.15
+    ) +
+    scale_x_discrete(
+      labels = function(x) {
+        traducir_categoria(x)
+      }
+    ) +
+    labs(
+      title = paste(
+        nombre_variable(variable_numerica),
+        "según",
+        nombre_variable(variable_categorica)
+      ),
+      x = nombre_variable(variable_categorica),
+      y = nombre_variable(variable_numerica)
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(
+        angle = 30,
+        hjust = 1
+      )
+    )
+
+  print(grafico)
+
+  resumen_medianas <- df_limpio %>%
+    group_by(
+      Grupo = .data[[variable_categorica]]
+    ) %>%
+    summarise(
+      Mediana = median(
+        .data[[variable_numerica]],
+        na.rm = TRUE
+      ),
+      .groups = "drop"
+    )
+
+  grupo_mayor <- resumen_medianas %>%
+    slice_max(
+      order_by = Mediana,
+      n = 1,
+      with_ties = FALSE
+    )
+
+  resultado <- resultados_kruskal[i, ]
+
+  cat(
+    paste0(
+      "\n<div class='comentario-grafico'>",
+      resultado$Decision[[1]],
+      ". El tamaño del efecto fue ",
+      resultado$Tamano_efecto[[1]],
+      ". La mediana más alta se observó en <strong>",
+      traducir_categoria(grupo_mayor$Grupo[[1]]),
+      "</strong>, con un valor de ",
+      round(grupo_mayor$Mediana[[1]], 2),
+      ".",
+      "</div>\n"
+    )
+  )
+
+  cat(
+    "\n<div class='separador-grafico'></div>\n"
+  )
+}
+```
+
+# Análisis multivariado
+
+El análisis multivariado estudia varias variables de manera conjunta. En este caso se utiliza el Análisis de Componentes Principales para resumir la información numérica.
+
+## Selección de variables para el ACP
+
+El ACP se aplica a las ocho variables numéricas con significado analítico. `Student_ID` se excluye porque únicamente identifica los registros.
+
+```{r variables-acp}
+variables_acp <- c(
+  "Pre_Semester_GPA",
+  "Weekly_GenAI_Hours",
+  "Tool_Diversity",
+  "Traditional_Study_Hours",
+  "Perceived_AI_Dependency",
+  "Anxiety_Level_During_Exams",
+  "Post_Semester_GPA",
+  "Skill_Retention_Score"
+)
+
+datos_acp <- df_limpio %>%
+  select(all_of(variables_acp))
+```
+
+## Estandarización
+
+Las variables se estandarizan porque poseen unidades y escalas diferentes. Después del proceso, cada variable debe tener una media cercana a cero y una desviación estándar cercana a uno.
+
+```{r estandarizacion}
+datos_estandarizados <- scale(datos_acp)
+
+comprobacion_estandarizacion <- tibble(
+  Variable = vapply(
+    colnames(datos_estandarizados),
+    nombre_variable,
+    character(1)
+  ),
+  Media = colMeans(datos_estandarizados),
+  Desviacion = apply(
+    datos_estandarizados,
+    2,
+    sd
+  )
+)
+
+kable(
+  comprobacion_estandarizacion,
+  digits = 4,
+  caption = "Comprobación de la estandarización"
+)
+```
+
+Los resultados cercanos a cero en la media y a uno en la desviación confirman que las variables fueron estandarizadas correctamente.
+
+## Análisis de Componentes Principales
+
+El ACP crea nuevas variables llamadas componentes principales, las cuales concentran parte de la información contenida en las variables originales.
+
+```{r aplicar-acp}
+modelo_acp <- prcomp(
+  datos_estandarizados,
+  center = FALSE,
+  scale. = FALSE
+)
+
+varianza_acp <- modelo_acp$sdev^2
+
+porcentaje_varianza <- (
+  varianza_acp /
+    sum(varianza_acp)
+)
+
+varianza_acumulada <- cumsum(
+  porcentaje_varianza
+)
+
+tabla_varianza_acp <- tibble(
+  Componente = paste0(
+    "CP",
+    seq_along(varianza_acp)
+  ),
+  Autovalor = varianza_acp,
+  Porcentaje = porcentaje_varianza,
+  Porcentaje_acumulado = varianza_acumulada
+)
+
+tabla_varianza_mostrar <- tabla_varianza_acp %>%
+  mutate(
+    Porcentaje = percent(
+      Porcentaje,
+      accuracy = 0.1
+    ),
+    Porcentaje_acumulado = percent(
+      Porcentaje_acumulado,
+      accuracy = 0.1
+    )
+  )
+
+kable(
+  tabla_varianza_mostrar,
+  digits = 4,
+  caption = "Varianza explicada por los componentes principales"
+)
+```
+
+Los dos primeros componentes explican conjuntamente `r percent(sum(porcentaje_varianza[1:2]), accuracy = 0.1)` de la variabilidad de las variables seleccionadas.
+
+### Gráfico de sedimentación
+
+El gráfico muestra cuánto aporta cada componente y cuánto se acumula al combinar varios componentes.
+
+```{r grafico-sedimentacion, fig.height=5}
+ggplot(
+  tabla_varianza_acp,
+  aes(
+    x = seq_along(Componente),
+    y = Porcentaje
+  )
+) +
+  geom_col(
+    fill = "#2C7FB8"
+  ) +
+  geom_line(
+    aes(y = Porcentaje_acumulado),
+    linewidth = 1,
+    group = 1
+  ) +
+  geom_point(
+    aes(y = Porcentaje_acumulado),
+    size = 2.5
+  ) +
+  scale_y_continuous(
+    labels = percent_format(
+      accuracy = 1
+    )
+  ) +
+  scale_x_continuous(
+    breaks = seq_along(
+      tabla_varianza_acp$Componente
+    ),
+    labels = tabla_varianza_acp$Componente
+  ) +
+  labs(
+    title = "Varianza explicada por el ACP",
+    subtitle = "Barras: varianza individual; línea: varianza acumulada",
+    x = "Componente principal",
+    y = "Porcentaje de varianza"
+  ) +
+  theme_minimal()
+```
+
+El gráfico permite determinar cuántos componentes son necesarios para conservar una parte importante de la información original.
+
+### Cargas de las variables
+
+Las cargas indican qué tanto contribuye cada variable original a la formación de los componentes principales.
+
+```{r cargas-acp}
+cargas_acp <- as.data.frame(
+  modelo_acp$rotation
+) %>%
+  rownames_to_column(
+    "Variable_original"
+  ) %>%
+  mutate(
+    Variable = vapply(
+      Variable_original,
+      nombre_variable,
+      character(1)
+    )
+  ) %>%
+  select(
+    Variable,
+    everything(),
+    -Variable_original
+  )
+
+kable(
+  cargas_acp,
+  digits = 4,
+  caption = "Cargas de las variables en los componentes principales"
+)
+```
+
+Los valores con mayor magnitud, positivos o negativos, identifican las variables que más contribuyen a cada componente.
+
+### Círculo de correlaciones
+
+El círculo permite observar la relación de las variables con los dos primeros componentes. Flechas cercanas indican relaciones positivas y flechas en direcciones opuestas indican relaciones negativas.
+
+```{r circulo-correlaciones, fig.height=7}
+coordenadas_variables <- sweep(
+  modelo_acp$rotation[
+    , 1:2,
+    drop = FALSE
+  ],
+  2,
+  modelo_acp$sdev[1:2],
+  "*"
+) %>%
+  as.data.frame() %>%
+  rownames_to_column(
+    "Variable_original"
+  ) %>%
+  mutate(
+    Variable = vapply(
+      Variable_original,
+      nombre_variable,
+      character(1)
+    )
+  )
+
+circulo <- tibble(
+  Angulo = seq(
+    0,
+    2 * pi,
+    length.out = 300
+  ),
+  X = cos(Angulo),
+  Y = sin(Angulo)
+)
+
+ggplot() +
+  geom_path(
+    data = circulo,
+    aes(X, Y),
+    color = "gray50"
+  ) +
+  geom_hline(
+    yintercept = 0,
+    color = "gray75"
+  ) +
+  geom_vline(
+    xintercept = 0,
+    color = "gray75"
+  ) +
+  geom_segment(
+    data = coordenadas_variables,
+    aes(
+      x = 0,
+      y = 0,
+      xend = PC1,
+      yend = PC2
+    ),
+    arrow = arrow(
+      length = grid::unit(
+        0.18,
+        "cm"
+      )
+    ),
+    linewidth = 0.8,
+    color = "#225EA8"
+  ) +
+  geom_text(
+    data = coordenadas_variables,
+    aes(
+      x = PC1,
+      y = PC2,
+      label = Variable
+    ),
+    size = 3.3,
+    vjust = -0.6
+  ) +
+  coord_equal(
+    xlim = c(-1.15, 1.15),
+    ylim = c(-1.15, 1.15)
+  ) +
+  labs(
+    title = "Círculo de correlaciones del ACP",
+    x = paste0(
+      "CP1 (",
+      percent(
+        porcentaje_varianza[1],
+        accuracy = 0.1
+      ),
+      ")"
+    ),
+    y = paste0(
+      "CP2 (",
+      percent(
+        porcentaje_varianza[2],
+        accuracy = 0.1
+      ),
+      ")"
+    )
+  ) +
+  theme_minimal()
+```
+
+Las flechas más largas están mejor representadas por los dos primeros componentes, mientras que las flechas cortas requieren componentes adicionales para explicar su comportamiento.
+
+### Representación de individuos
+
+Este gráfico representa a los estudiantes utilizando los dos primeros componentes. Se toma una muestra para evitar una acumulación excesiva de puntos.
+
+```{r individuos-acp, fig.height=7}
+coordenadas_individuos <- as.data.frame(
+  modelo_acp$x[, 1:2]
+) %>%
+  mutate(
+    Student_ID = df_limpio$Student_ID
+  )
+
+set.seed(142)
+
+muestra_individuos <- coordenadas_individuos %>%
+  slice_sample(
+    n = min(
+      5000,
+      nrow(coordenadas_individuos)
+    )
+  )
+
+ggplot(
+  muestra_individuos,
+  aes(PC1, PC2)
+) +
+  geom_point(
+    alpha = 0.22,
+    size = 1.2
+  ) +
+  labs(
+    title = "Estudiantes en los dos primeros componentes",
+    subtitle = "Cada punto representa un estudiante",
+    x = paste0(
+      "CP1 (",
+      percent(
+        porcentaje_varianza[1],
+        accuracy = 0.1
+      ),
+      ")"
+    ),
+    y = paste0(
+      "CP2 (",
+      percent(
+        porcentaje_varianza[2],
+        accuracy = 0.1
+      ),
+      ")"
+    )
+  ) +
+  theme_minimal()
+```
+
+La cercanía entre los puntos indica estudiantes con perfiles numéricos similares. Sin embargo, este gráfico utiliza solo una parte de la variabilidad total del conjunto de datos.
+
+## Interpretación del ACP
+
+Se identifican automáticamente las tres variables que presentan las cargas más altas en valor absoluto para los primeros tres componentes.
+
+```{r interpretacion-acp, results='asis'}
+componentes_a_interpretar <- min(
+  3,
+  ncol(modelo_acp$rotation)
+)
+
+for (i in seq_len(componentes_a_interpretar)) {
+
+  cargas <- modelo_acp$rotation[, i]
+
+  orden <- order(
+    abs(cargas),
+    decreasing = TRUE
+  )
+
+  principales <- names(cargas)[orden][1:3]
+  valores <- round(
+    cargas[orden][1:3],
+    3
+  )
+
+  principales_espanol <- vapply(
+    principales,
+    nombre_variable,
+    character(1)
+  )
+
+  cat(
+    paste0(
+      "- **CP",
+      i,
+      "** está principalmente relacionado con: ",
+      paste0(
+        principales_espanol,
+        " (",
+        valores,
+        ")",
+        collapse = ", "
+      ),
+      ".\n"
+    )
+  )
+}
+```
+
+Las cargas positivas y negativas indican la dirección de la relación con cada componente. No representan por sí mismas una relación causal.
+
+# Clusterización
+
+La clusterización permite agrupar estudiantes con características numéricas similares. En este análisis se utiliza K-means con las mismas variables estandarizadas empleadas en el ACP.
+
+```{r funciones-cluster, include=FALSE}
+interpretar_silueta <- function(valor) {
+  case_when(
+    valor < 0.25 ~ "débil",
+    valor < 0.50 ~ "moderada",
+    valor < 0.70 ~ "buena",
+    TRUE ~ "muy buena"
+  )
+}
+
+categoria_predominante <- function(x) {
+  tabla <- sort(
+    table(x, useNA = "no"),
+    decreasing = TRUE
+  )
+
+  categoria <- names(tabla)[1]
+  porcentaje <- as.numeric(tabla[1]) / sum(tabla)
+
+  paste0(
+    traducir_categoria(categoria),
+    " (",
+    percent(porcentaje, accuracy = 0.1),
+    ")"
+  )
+}
+```
+
+## Preparación para K-means
+
+K-means utiliza las variables numéricas estandarizadas para evitar que aquellas con escalas más grandes tengan una influencia excesiva.
+
+```{r preparacion-clustering}
+datos_cluster <- as.matrix(datos_estandarizados)
+
+set.seed(142)
+
+indices_evaluacion <- sample(
+  seq_len(nrow(datos_cluster)),
+  size = min(
+    5000,
+    nrow(datos_cluster)
+  )
+)
+
+muestra_cluster <- datos_cluster[
+  indices_evaluacion,
+  ,
+  drop = FALSE
+]
+```
+
+## Elección del número de clústeres
+
+Se evalúan soluciones de 2 a 8 clústeres mediante el método del codo y el método de la silueta.
+
+### Método del codo
+
+El método del codo analiza cómo disminuye la variación interna al aumentar el número de clústeres. Se busca el punto donde agregar más grupos produce una mejora cada vez menor.
+
+```{r metodo-codo, fig.height=5}
+set.seed(142)
+
+resultados_codo <- map_dfr(
+  2:8,
+  function(k) {
+
+    modelo <- kmeans(
+      muestra_cluster,
+      centers = k,
+      nstart = 20,
+      iter.max = 100
+    )
+
+    tibble(
+      K = k,
+      Suma_interna = modelo$tot.withinss
+    )
+  }
+)
+
+ggplot(
+  resultados_codo,
+  aes(
+    x = K,
+    y = Suma_interna
+  )
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  scale_x_continuous(
+    breaks = 2:8
+  ) +
+  labs(
+    title = "Método del codo",
+    subtitle = "Menor variación interna representa grupos más compactos",
+    x = "Número de clústeres",
+    y = "Suma de cuadrados dentro de los grupos"
+  ) +
+  theme_minimal()
+```
+
+El gráfico del codo sirve como referencia visual, pero la selección final se realiza mediante la silueta.
+
+### Método de la silueta
+
+La silueta compara qué tan cerca se encuentra cada estudiante de su propio clúster frente a los demás. Los valores más altos indican una mejor separación.
+
+Para controlar el consumo de memoria, el cálculo se realiza sobre una muestra máxima de 1 500 registros.
+
+```{r metodo-silueta, fig.height=5}
+set.seed(142)
+
+indices_silueta <- sample(
+  seq_len(nrow(datos_cluster)),
+  size = min(
+    1500,
+    nrow(datos_cluster)
+  )
+)
+
+muestra_silueta <- datos_cluster[
+  indices_silueta,
+  ,
+  drop = FALSE
+]
+
+distancias_silueta <- dist(
+  muestra_silueta
+)
+
+resultados_silueta <- map_dfr(
+  2:8,
+  function(k) {
+
+    modelo <- kmeans(
+      muestra_silueta,
+      centers = k,
+      nstart = 25,
+      iter.max = 100
+    )
+
+    silueta <- silhouette(
+      modelo$cluster,
+      distancias_silueta
+    )
+
+    tibble(
+      K = k,
+      Silueta_promedio = mean(
+        silueta[, "sil_width"]
+      )
+    )
+  }
+)
+
+ggplot(
+  resultados_silueta,
+  aes(
+    x = K,
+    y = Silueta_promedio
+  )
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  scale_x_continuous(
+    breaks = 2:8
+  ) +
+  labs(
+    title = "Evaluación mediante silueta",
+    subtitle = "Un valor mayor indica una mejor separación entre grupos",
+    x = "Número de clústeres",
+    y = "Silueta promedio"
+  ) +
+  theme_minimal()
+```
+
+```{r seleccionar-k}
+seleccion_k <- resultados_silueta %>%
+  slice_max(
+    order_by = Silueta_promedio,
+    n = 1,
+    with_ties = FALSE
+  )
+
+mejor_k <- seleccion_k$K
+mejor_silueta <- seleccion_k$Silueta_promedio
+
+tibble(
+  Indicador = c(
+    "Número de clústeres seleccionado",
+    "Silueta promedio durante la selección",
+    "Nivel de separación"
+  ),
+  Resultado = c(
+    as.character(mejor_k),
+    as.character(round(mejor_silueta, 4)),
+    interpretar_silueta(mejor_silueta)
+  )
+) %>%
+  kable(
+    caption = "Selección del número de clústeres"
+  )
+```
+
+El número seleccionado fue `r mejor_k`, porque presentó la silueta promedio más alta entre las soluciones evaluadas.
+
+## Aplicación de K-means
+
+Una vez seleccionado el número de grupos, K-means se aplica sobre los 50 000 registros.
+
+```{r modelo-kmeans}
+set.seed(142)
+
+modelo_kmeans <- kmeans(
+  datos_cluster,
+  centers = mejor_k,
+  nstart = 50,
+  iter.max = 200
+)
+
+df_cluster <- df_limpio %>%
+  mutate(
+    Cluster = factor(
+      modelo_kmeans$cluster
+    )
+  )
+```
+
+## Evaluación de los clústeres
+
+### Tamaño de los clústeres
+
+La distribución de estudiantes permite comprobar si los grupos tienen tamaños razonables o si alguno concentra casi todos los registros.
+
+```{r tamanos-cluster}
+tamanos_cluster <- df_cluster %>%
+  count(
+    Cluster,
+    name = "Cantidad"
+  ) %>%
+  mutate(
+    Porcentaje = Cantidad / sum(Cantidad)
+  )
+
+tamanos_cluster_mostrar <- tamanos_cluster %>%
+  transmute(
+    `Clúster` = Cluster,
+    Cantidad,
+    Porcentaje = percent(
+      Porcentaje,
+      accuracy = 0.1
+    )
+  )
+
+kable(
+  tamanos_cluster_mostrar,
+  caption = "Tamaño de los clústeres"
+)
+```
+
+### Silueta del modelo final
+
+La silueta final evalúa la separación de los clústeres después de aplicar el modelo a todos los estudiantes. Se calcula con una muestra de 2 000 registros para reducir el consumo de memoria.
+
+```{r silueta-modelo-final}
+set.seed(142)
+
+indices_finales <- sample(
+  seq_len(nrow(datos_cluster)),
+  size = min(
+    2000,
+    nrow(datos_cluster)
+  )
+)
+
+datos_silueta_final <- datos_cluster[
+  indices_finales,
+  ,
+  drop = FALSE
+]
+
+grupos_silueta_final <- modelo_kmeans$cluster[
+  indices_finales
+]
+
+silueta_final <- silhouette(
+  grupos_silueta_final,
+  dist(datos_silueta_final)
+)
+
+silueta_promedio_final <- mean(
+  silueta_final[, "sil_width"]
+)
+
+evaluacion_silueta_final <- tibble(
+  Indicador = c(
+    "Silueta promedio del modelo final",
+    "Nivel de separación"
+  ),
+  Resultado = c(
+    as.character(
+      round(
+        silueta_promedio_final,
+        4
+      )
+    ),
+    interpretar_silueta(
+      silueta_promedio_final
+    )
+  )
+)
+
+kable(
+  evaluacion_silueta_final,
+  caption = "Evaluación del modelo final"
+)
+```
+
+La silueta promedio fue `r round(silueta_promedio_final, 3)`, lo que representa una separación `r interpretar_silueta(silueta_promedio_final)` entre los clústeres. Por ello, los grupos deben interpretarse como perfiles aproximados y no como divisiones completamente separadas.
+
+## Visualización de los clústeres mediante ACP
+
+El gráfico proyecta los clústeres sobre los dos primeros componentes principales. Cada punto representa un estudiante y las cruces muestran los centroides de los grupos.
+
+```{r visualizacion-cluster, fig.height=7}
+coordenadas_cluster <- as.data.frame(
+  modelo_acp$x[, 1:2]
+) %>%
+  mutate(
+    Cluster = df_cluster$Cluster,
+    Student_ID = df_cluster$Student_ID
+  )
+
+set.seed(142)
+
+muestra_visual_cluster <- coordenadas_cluster %>%
+  slice_sample(
+    n = min(
+      7000,
+      nrow(coordenadas_cluster)
+    )
+  )
+
+centroides_visuales <- coordenadas_cluster %>%
+  group_by(Cluster) %>%
+  summarise(
+    PC1 = mean(PC1),
+    PC2 = mean(PC2),
+    .groups = "drop"
+  )
+
+ggplot(
+  muestra_visual_cluster,
+  aes(
+    x = PC1,
+    y = PC2,
+    color = Cluster
+  )
+) +
+  geom_point(
+    alpha = 0.30,
+    size = 1.2
+  ) +
+  geom_point(
+    data = centroides_visuales,
+    aes(
+      x = PC1,
+      y = PC2,
+      color = Cluster
+    ),
+    size = 6,
+    shape = 4,
+    stroke = 2
+  ) +
+  labs(
+    title = "Visualización de los clústeres en el plano del ACP",
+    subtitle = "Las cruces representan los centroides proyectados",
+    x = paste0(
+      "CP1 (",
+      percent(
+        porcentaje_varianza[1],
+        accuracy = 0.1
+      ),
+      ")"
+    ),
+    y = paste0(
+      "CP2 (",
+      percent(
+        porcentaje_varianza[2],
+        accuracy = 0.1
+      ),
+      ")"
+    ),
+    color = "Clúster"
+  ) +
+  theme_minimal()
+```
+
+El posible traslape entre los colores es coherente con el valor de silueta obtenido. Además, esta representación utiliza solamente los dos primeros componentes y no toda la información empleada por K-means.
+
+## Caracterización numérica de los clústeres
+
+Se calculan los promedios de las variables originales para identificar las principales diferencias entre los grupos.
+
+```{r perfiles-numericos}
+perfiles_numericos <- df_cluster %>%
+  group_by(Cluster) %>%
+  summarise(
+    across(
+      all_of(variables_acp),
+      ~ mean(.x, na.rm = TRUE)
+    ),
+    Cantidad = n(),
+    .groups = "drop"
+  )
+
+perfiles_numericos_mostrar <- perfiles_numericos
+
+names(perfiles_numericos_mostrar) <- c(
+  "Clúster",
+  vapply(
+    variables_acp,
+    nombre_variable,
+    character(1)
+  ),
+  "Cantidad"
+)
+
+kable(
+  perfiles_numericos_mostrar,
+  digits = 3,
+  caption = "Promedios de las variables por clúster"
+)
+```
+
+Esta tabla permite identificar qué grupos presentan mayores o menores promedios en rendimiento académico, uso de IA, estudio tradicional, dependencia, ansiedad y retención de habilidades.
+
+## Caracterización categórica
+
+Se identifica la categoría predominante de cada variable dentro de cada clúster. El porcentaje indica qué proporción del grupo pertenece a dicha categoría.
+
+```{r perfiles-categoricos}
+perfiles_categoricos <- df_cluster %>%
+  group_by(Cluster) %>%
+  summarise(
+    `Área académica predominante` =
+      categoria_predominante(Major_Category),
+
+    `Año de estudio predominante` =
+      categoria_predominante(Year_of_Study),
+
+    `Uso principal de IA predominante` =
+      categoria_predominante(Primary_Use_Case),
+
+    `Habilidad en prompts predominante` =
+      categoria_predominante(Prompt_Engineering_Skill),
+
+    `Política institucional predominante` =
+      categoria_predominante(Institutional_Policy),
+
+    `Riesgo de agotamiento predominante` =
+      categoria_predominante(Burnout_Risk_Level),
+
+    `Suscripción de pago predominante` =
+      categoria_predominante(Paid_Subscription),
+
+    .groups = "drop"
+  ) %>%
+  rename(
+    `Clúster` = Cluster
+  )
+
+kable(
+  perfiles_categoricos,
+  caption = "Categorías predominantes por clúster"
+)
+```
+
+Las categorías predominantes complementan los promedios numéricos, pero deben interpretarse considerando su porcentaje, ya que una categoría puede ser la más frecuente sin representar a la mayoría absoluta del clúster.
+
+## Interpretación automática de los perfiles
+
+La interpretación utiliza los centroides estandarizados. Un valor positivo indica que el clúster está por encima del promedio general y uno negativo indica que está por debajo.
+
+```{r interpretacion-cluster, results='asis'}
+centros_estandarizados <- as.data.frame(
+  modelo_kmeans$centers
+) %>%
+  rownames_to_column(
+    "Cluster"
+  )
+
+for (
+  i in seq_len(
+    nrow(centros_estandarizados)
+  )
+) {
+
+  fila <- centros_estandarizados[
+    i,
+    -1,
+    drop = FALSE
+  ]
+
+  valores <- as.numeric(fila)
+  nombres <- names(fila)
+
+  orden_altas <- order(
+    valores,
+    decreasing = TRUE
+  )
+
+  orden_bajas <- order(
+    valores,
+    decreasing = FALSE
+  )
+
+  altas <- nombres[
+    orden_altas[1:3]
+  ]
+
+  bajas <- nombres[
+    orden_bajas[1:2]
+  ]
+
+  valores_altos <- round(
+    valores[orden_altas[1:3]],
+    2
+  )
+
+  valores_bajos <- round(
+    valores[orden_bajas[1:2]],
+    2
+  )
+
+  altas_espanol <- vapply(
+    altas,
+    nombre_variable,
+    character(1)
+  )
+
+  bajas_espanol <- vapply(
+    bajas,
+    nombre_variable,
+    character(1)
+  )
+
+  cat(
+    paste0(
+      "- **Clúster ",
+      centros_estandarizados$Cluster[i],
+      ":** presenta valores relativamente altos en ",
+      paste0(
+        altas_espanol,
+        " (",
+        valores_altos,
+        ")",
+        collapse = ", "
+      ),
+      " y valores relativamente bajos en ",
+      paste0(
+        bajas_espanol,
+        " (",
+        valores_bajos,
+        ")",
+        collapse = ", "
+      ),
+      ".\n"
+    )
+  )
+}
+```
+
+Los perfiles automáticos muestran diferencias relativas respecto al promedio general. Los nombres descriptivos de los clústeres deben asignarse después de revisar conjuntamente los promedios numéricos, las categorías predominantes, la visualización del ACP y la calidad indicada por la silueta.
+
+# Resultados principales
+
+En esta sección se resumen los resultados más importantes obtenidos durante la limpieza, el análisis estadístico, el ACP y la clusterización.
+
+```{r resultados-principales, results='asis'}
+# Relación de Spearman más intensa sin repetir la diagonal.
+matriz_auxiliar <- matriz_spearman
+matriz_auxiliar[
+  lower.tri(matriz_auxiliar, diag = TRUE)
+] <- NA
+
+valor_maximo <- max(
+  abs(matriz_auxiliar),
+  na.rm = TRUE
+)
+
+indice_mayor <- which(
+  abs(matriz_auxiliar) == valor_maximo,
+  arr.ind = TRUE
+)[1, ]
+
+variable_cor_1 <- rownames(
+  matriz_auxiliar
+)[indice_mayor[1]]
+
+variable_cor_2 <- colnames(
+  matriz_auxiliar
+)[indice_mayor[2]]
+
+valor_cor <- matriz_auxiliar[
+  indice_mayor[1],
+  indice_mayor[2]
+]
+
+# Promedios académicos.
+promedio_previo <- mean(
+  df_limpio$Pre_Semester_GPA,
+  na.rm = TRUE
+)
+
+promedio_posterior <- mean(
+  df_limpio$Post_Semester_GPA,
+  na.rm = TRUE
+)
+
+diferencia_promedios <- (
+  promedio_posterior -
+    promedio_previo
+)
+
+# Asociación categórica de mayor intensidad.
+asociacion_categorica_mayor <- resultados_chi %>%
+  slice_max(
+    order_by = V_Cramer,
+    n = 1,
+    with_ties = FALSE
+  )
+
+# Comparación numérica-categórica con mayor efecto.
+efecto_kruskal_mayor <- resultados_kruskal %>%
+  slice_max(
+    order_by = Epsilon_cuadrado,
+    n = 1,
+    with_ties = FALSE
+  )
+
+# Tamaños de los clústeres.
+texto_tamanos_cluster <- tamanos_cluster %>%
+  mutate(
+    Descripcion = paste0(
+      "clúster ",
+      Cluster,
+      ": ",
+      Cantidad,
+      " estudiantes (",
+      percent(
+        Porcentaje,
+        accuracy = 0.1
+      ),
+      ")"
+    )
+  ) %>%
+  pull(Descripcion) %>%
+  paste(collapse = "; ")
+
+# Identificación automática de perfiles relevantes.
+cluster_mayor_rendimiento <- perfiles_numericos %>%
+  slice_max(
+    order_by = Post_Semester_GPA,
+    n = 1,
+    with_ties = FALSE
+  )
+
+cluster_menor_rendimiento <- perfiles_numericos %>%
+  slice_min(
+    order_by = Post_Semester_GPA,
+    n = 1,
+    with_ties = FALSE
+  )
+
+cluster_mayor_uso_ia <- perfiles_numericos %>%
+  slice_max(
+    order_by = Weekly_GenAI_Hours,
+    n = 1,
+    with_ties = FALSE
+  )
+
+cat(
+  paste0(
+    "- El conjunto final contiene **",
+    nrow(df_limpio),
+    " estudiantes** y **",
+    ncol(df_limpio),
+    " variables**. No se encontraron valores faltantes, ",
+    "registros duplicados ni valores fuera de los rangos esperados.\n"
+  )
+)
+
+cat(
+  paste0(
+    "- El promedio académico aumentó de **",
+    round(promedio_previo, 3),
+    "** antes del semestre a **",
+    round(promedio_posterior, 3),
+    "** después del semestre, lo que representa una diferencia promedio de **",
+    round(diferencia_promedios, 3),
+    " puntos**.\n"
+  )
+)
+
+cat(
+  paste0(
+    "- La relación monotónica más intensa se observó entre **",
+    nombre_variable(variable_cor_1),
+    "** y **",
+    nombre_variable(variable_cor_2),
+    "**, con una correlación de Spearman de **",
+    round(valor_cor, 3),
+    "**, considerada ",
+    interpretar_correlacion(valor_cor),
+    ".\n"
+  )
+)
+
+cat(
+  paste0(
+    "- La asociación categórica de mayor intensidad se encontró entre **",
+    asociacion_categorica_mayor$Variable_1,
+    "** y **",
+    asociacion_categorica_mayor$Variable_2,
+    "**. La V de Cramer fue **",
+    round(
+      asociacion_categorica_mayor$V_Cramer,
+      3
+    ),
+    "**, lo que representa una asociación ",
+    asociacion_categorica_mayor$Intensidad,
+    ".\n"
+  )
+)
+
+cat(
+  paste0(
+    "- La comparación entre una variable numérica y una categórica con mayor tamaño del efecto fue **",
+    efecto_kruskal_mayor$Variable_numerica,
+    "** según **",
+    efecto_kruskal_mayor$Variable_categorica,
+    "**. El epsilon cuadrado fue **",
+    round(
+      efecto_kruskal_mayor$Epsilon_cuadrado,
+      3
+    ),
+    "**, considerado ",
+    efecto_kruskal_mayor$Tamano_efecto,
+    ".\n"
+  )
+)
+
+cat(
+  paste0(
+    "- Los dos primeros componentes principales explican conjuntamente **",
+    percent(
+      sum(porcentaje_varianza[1:2]),
+      accuracy = 0.1
+    ),
+    "** de la variabilidad. Los primeros tres componentes explican **",
+    percent(
+      sum(porcentaje_varianza[1:3]),
+      accuracy = 0.1
+    ),
+    "**.\n"
+  )
+)
+
+cat(
+  paste0(
+    "- El método de la silueta seleccionó **",
+    mejor_k,
+    " clústeres**. Su distribución fue: ",
+    texto_tamanos_cluster,
+    ".\n"
+  )
+)
+
+cat(
+  paste0(
+    "- La silueta promedio del modelo final fue **",
+    round(silueta_promedio_final, 3),
+    "**, lo que indica una separación **",
+    interpretar_silueta(
+      silueta_promedio_final
+    ),
+    "**. Por esta razón, los clústeres representan perfiles aproximados y no grupos completamente separados.\n"
+  )
+)
+
+cat(
+  paste0(
+    "- El **clúster ",
+    cluster_mayor_rendimiento$Cluster,
+    "** presentó el mayor promedio posterior al semestre, con **",
+    round(
+      cluster_mayor_rendimiento$Post_Semester_GPA,
+      3
+    ),
+    "**, junto con una retención promedio de habilidades de **",
+    round(
+      cluster_mayor_rendimiento$Skill_Retention_Score,
+      3
+    ),
+    "**.\n"
+  )
+)
+
+cat(
+  paste0(
+    "- El **clúster ",
+    cluster_mayor_uso_ia$Cluster,
+    "** registró el mayor uso semanal de IA, con **",
+    round(
+      cluster_mayor_uso_ia$Weekly_GenAI_Hours,
+      3
+    ),
+    " horas**. También presentó una dependencia percibida promedio de **",
+    round(
+      cluster_mayor_uso_ia$Perceived_AI_Dependency,
+      3
+    ),
+    "** y una ansiedad promedio de **",
+    round(
+      cluster_mayor_uso_ia$Anxiety_Level_During_Exams,
+      3
+    ),
+    "**.\n"
+  )
+)
+
+cat(
+  paste0(
+    "- El **clúster ",
+    cluster_menor_rendimiento$Cluster,
+    "** presentó el menor promedio posterior al semestre, con **",
+    round(
+      cluster_menor_rendimiento$Post_Semester_GPA,
+      3
+    ),
+    "**, y una retención promedio de habilidades de **",
+    round(
+      cluster_menor_rendimiento$Skill_Retention_Score,
+      3
+    ),
+    "**.\n"
+  )
+)
+```
+
+Los resultados deben interpretarse considerando tanto la significancia estadística como la intensidad práctica de las relaciones. Debido al tamaño de la muestra, algunas diferencias pueden resultar estadísticamente significativas aunque su efecto sea pequeño.
+
+# Conclusiones
+
+1. El conjunto de datos se encontró completo y en condiciones adecuadas para el análisis. No se detectaron valores faltantes, registros duplicados ni valores fuera de los rangos establecidos, por lo que se conservaron los 50 000 estudiantes y las 16 variables.
+
+2. Las variables continuas no presentaron una distribución normal perfecta. Esto fue confirmado mediante la prueba de Lilliefors, los histogramas y los gráficos Q-Q, por lo que se utilizaron principalmente métodos no paramétricos.
+
+3. El promedio académico posterior al semestre fue mayor que el promedio previo. Además, ambas variables presentaron la relación numérica más intensa del análisis, lo que indica que los estudiantes con mejores resultados previos tienden también a obtener mejores resultados posteriores.
+
+4. Las horas semanales de uso de IA presentaron una distribución asimétrica, con una mayor concentración en valores bajos y algunos estudiantes con niveles elevados de uso. Estos valores se conservaron porque se encontraban dentro de rangos posibles.
+
+5. Las pruebas chi-cuadrado permitieron identificar asociaciones entre variables categóricas. Sin embargo, la V de Cramer mostró que la significancia estadística debe analizarse junto con la intensidad de cada asociación.
+
+6. Las pruebas de Kruskal-Wallis identificaron diferencias entre algunos grupos. El epsilon cuadrado permitió comprobar si estas diferencias tenían un efecto práctico insignificante, pequeño, moderado o grande.
+
+7. El ACP permitió resumir las ocho variables numéricas utilizadas. Los dos primeros componentes explicaron aproximadamente `r percent(sum(porcentaje_varianza[1:2]), accuracy = 0.1)` de la variabilidad y los primeros tres explicaron `r percent(sum(porcentaje_varianza[1:3]), accuracy = 0.1)`.
+
+8. K-means identificó `r mejor_k` perfiles de estudiantes. Uno presentó un mejor rendimiento académico y mayor retención de habilidades; otro concentró un uso considerablemente mayor de IA, junto con niveles superiores de dependencia y ansiedad; y otro presentó resultados académicos relativamente menores.
+
+9. La silueta promedio de `r round(silueta_promedio_final, 3)` indica que la separación entre los clústeres es `r interpretar_silueta(silueta_promedio_final)`. Por ello, los grupos deben considerarse perfiles generales con cierto traslape y no categorías completamente diferenciadas.
+
+10. Los resultados permiten describir relaciones y perfiles relacionados con el uso de IA, los hábitos de estudio y el desempeño académico. No obstante, no permiten concluir que la inteligencia artificial sea la causa directa de mejoras o deterioros en el rendimiento de los estudiantes.
+
+# Limitaciones
+
+- La información disponible no permite confirmar completamente si los datos corresponden a estudiantes reales o si fueron generados de forma sintética.
+
+- El análisis es observacional y descriptivo, por lo que permite identificar asociaciones, pero no establecer relaciones de causa y efecto.
+
+- Algunas variables, como la dependencia percibida, la ansiedad y el riesgo de agotamiento, se basan en percepciones personales y pueden contener sesgos de respuesta.
+
+- La prueba de normalidad se aplicó sobre muestras de hasta 5 000 registros para reducir el tiempo de procesamiento. Además, estas pruebas son muy sensibles cuando la cantidad de observaciones es grande.
+
+- La correlación de Spearman identifica relaciones monotónicas, pero no representa necesariamente relaciones causales ni explica otros factores que puedan influir en las variables.
+
+- Las pruebas chi-cuadrado y Kruskal-Wallis pueden producir resultados estadísticamente significativos debido al tamaño de la muestra. Por esa razón, se utilizaron la V de Cramer y el epsilon cuadrado para evaluar la intensidad práctica.
+
+- El ACP resume relaciones lineales entre variables numéricas. Los dos primeros componentes no conservan toda la variabilidad del conjunto de datos, por lo que la visualización bidimensional representa solamente una parte de la información.
+
+- K-means utiliza distancia euclidiana y supone clústeres aproximadamente compactos. Esta condición puede no representar completamente la estructura real de los estudiantes.
+
+- La selección del número de clústeres y la evaluación mediante silueta se realizaron utilizando muestras para controlar el consumo de memoria.
+
+- La silueta promedio obtenida muestra una separación débil, por lo que existe traslape entre los perfiles y no deben considerarse grupos completamente definidos.
+
+- Las categorías predominantes representan la categoría más frecuente de cada clúster, pero no necesariamente describen a todos sus integrantes.
+
+- Los resultados dependen de las variables seleccionadas, de la estandarización utilizada y de las decisiones tomadas durante la preparación y el análisis de los datos.
+
+# Referencias
+
+- Kaggle. *Impact of AI on Students*. <https://www.kaggle.com/datasets/laveshjadon/ai-impact-on-students>
+- R Core Team. *R: A Language and Environment for Statistical Computing*. R Foundation for Statistical Computing.
+- Wickham, H. et al. (2019). *Welcome to the tidyverse*. Journal of Open Source Software, 4(43), 1686.
+- Jolliffe, I. T., & Cadima, J. (2016). Principal component analysis: a review and recent developments. *Philosophical Transactions of the Royal Society A*, 374.
+- MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations.
+- Rousseeuw, P. J. (1987). Silhouettes: a graphical aid to the interpretation and validation of cluster analysis. *Journal of Computational and Applied Mathematics*, 20, 53–65.
+
+# Recursos del proyecto
+
+En esta sección se encuentran los principales archivos, respaldos y enlaces relacionados con el desarrollo del proyecto.
+
+<section class="recursos-proyecto">
+<div class="recursos-grid">
+
+<a href="ENLACE_GITHUB" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/github.png" alt="Icono de GitHub"></span><span class="recurso-contenido"><strong>Repositorio de GitHub</strong><small>Código fuente, archivo R Markdown y estilos CSS</small></span></a>
+
+<a href="ENLACE_RESPALDO" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/respaldo.png" alt="Icono de respaldo"></span><span class="recurso-contenido"><strong>Carpeta de respaldo</strong><small>Archivos y copias de seguridad del proyecto</small></span></a>
+
+<a href="ENLACE_DATASET" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/dataset.png" alt="Icono del dataset"></span><span class="recurso-contenido"><strong>Dataset original</strong><small>Fuente de los datos utilizada en el proyecto</small></span></a>
+
+<a href="ENLACE_CANVA" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/canva.png" alt="Icono de Canva"></span><span class="recurso-contenido"><strong>Presentación del proyecto</strong><small>Consultar la presentación realizada en Canva</small></span></a>
+
+<button type="button" class="recurso-boton" onclick="window.print()"><span class="recurso-icono"><img src="Iconos/pdf.png" alt="Icono de PDF"></span><span class="recurso-contenido"><strong>Guardar informe en PDF</strong><small>Abrir la impresión y elegir dónde guardarlo</small></span></button>
+
+<a href="ENLACE_HTML_PUBLICADO" class="recurso-boton" target="_blank" rel="noopener noreferrer"><span class="recurso-icono"><img src="Iconos/web.png" alt="Icono del sitio web"></span><span class="recurso-contenido"><strong>HTML publicado</strong><small>Consultar el informe interactivo en línea</small></span></a>
+
+</div>
+</section>
