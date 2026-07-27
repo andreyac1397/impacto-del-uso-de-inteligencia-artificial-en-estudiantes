@@ -109,7 +109,7 @@ El archivo permite analizar:
 
 El análisis utiliza la información disponible en el archivo original. Las relaciones encontradas son descriptivas y asociativas. No se puede concluir que una variable cause directamente cambios en otra.
 
-# Libreria y Diccionario de variables
+# Librerías y diccionario de variables
 
 ```{r diccionario-variables}
 library(tidyverse)
@@ -187,13 +187,33 @@ df_original <- read.csv(
 )
 
 cat("Archivo cargado correctamente:", ruta_csv, "\n")
-cat(" Cantidad de filas:", nrow(df_original), "\n")
+cat("Cantidad de filas:", nrow(df_original), "\n")
 cat("Cantidad de columnas:", ncol(df_original), "\n")
+
+cantidad_numericas <- sum(
+  vapply(
+    df_original[names(df_original) != "Student_ID"],
+    is.numeric,
+    logical(1)
+  )
+)
+
+cantidad_categoricas <- sum(
+  vapply(df_original, is.character, logical(1))
+)
+
+cantidad_logicas <- sum(
+  vapply(df_original, is.logical, logical(1))
+)
+
+cantidad_identificadoras <- as.integer(
+  "Student_ID" %in% names(df_original)
+)
 ```
 
 ## Revisión inicial
 
-El conjunto de datos contiene `r nrow(df_original)` registros y `r ncol(df_original)` variables. De ellas, 8 son numéricas y fueron reconocidas correctamente, mientras que 6 son categóricas y se cargaron como texto, por lo que se convertirán posteriormente. Además, se identificó una variable identificadora y una variable lógica.
+El conjunto de datos contiene `r nrow(df_original)` registros y `r ncol(df_original)` variables. De ellas, `r cantidad_numericas` son numéricas y fueron reconocidas correctamente, mientras que `r cantidad_categoricas` son categóricas y se cargaron como texto, por lo que se convertirán posteriormente. Además, se identificó `r cantidad_identificadoras` variable identificadora y `r cantidad_logicas` variable lógica.
 
 ```{r revision-inicial}
 dim(df_original)
@@ -219,10 +239,10 @@ resumen_inicial <- tibble(
   Resultado = c(
     nrow(df_original),
     ncol(df_original),
-    8,
-    6,
-    1,
-    1,
+    cantidad_numericas,
+    cantidad_categoricas,
+    cantidad_logicas,
+    cantidad_identificadoras,
     sum(is.na(df_original)),
     sum(duplicated(df_original)),
     sum(duplicated(df_original$Student_ID))
@@ -288,7 +308,7 @@ str(df_limpio)
 
 ## Valores faltantes
 
-Se revisó cuántos valores faltantes existen en cada variable y qué porcentaje representan.El resultado mostró que ninguna de las `r ncol(df_limpio)` variables contiene datos faltantes, por lo que no fue necesario eliminar registros ni aplicar imputación. Esta revisión es importante para confirmar que el dataset está completo antes del análisis.
+Se revisó cuántos valores faltantes existen en cada variable y qué porcentaje representan. El resultado mostró que ninguna de las `r ncol(df_limpio)` variables contiene datos faltantes, por lo que no fue necesario eliminar registros ni aplicar imputación. Esta revisión es importante para confirmar que el dataset está completo antes del análisis.
 ```{r valores-faltantes}
 faltantes_por_variable <- df_limpio %>%
   summarise(across(everything(), ~ sum(is.na(.)))) %>%
@@ -309,7 +329,7 @@ kable(
 )
 ```
 
-Los registros con valores faltantes se excluyen del análisis porque el archivo original se espera completo y la cantidad de observaciones es amplia.
+En caso de encontrarse valores faltantes, estos se excluirían del análisis, ya que el conjunto de datos se espera completo y contiene una cantidad amplia de observaciones.
 
 ```{r eliminar-faltantes}
 filas_antes_faltantes <- nrow(df_limpio)
@@ -397,7 +417,17 @@ tabla_atipicos <- map_dfr(
   variables_continuas,
   ~ contar_atipicos(df_limpio[[.x]]) %>%
     mutate(Variable = .x, .before = 1)
-)
+) %>%
+  mutate(
+    Variable = recode(
+      Variable,
+      "Pre_Semester_GPA" = "Promedio previo al semestre",
+      "Weekly_GenAI_Hours" = "Horas semanales de uso de IA",
+      "Traditional_Study_Hours" = "Horas de estudio tradicional",
+      "Post_Semester_GPA" = "Promedio posterior al semestre",
+      "Skill_Retention_Score" = "Puntaje de retención de habilidades"
+    )
+  )
 
 kable(tabla_atipicos, digits = 3, caption = "Valores atípicos por variable")
 ```
@@ -553,14 +583,22 @@ comentarios_histogramas <- c(
   Weekly_GenAI_Hours =
     "Predominan pocas horas de uso de IA, aunque algunos estudiantes alcanzan valores elevados.",
 
-  Traditional_Study_Hours =
-    "Los datos se concentran cerca de 11 horas y presentan una distribución aproximadamente simétrica.",
+  Traditional_Study_Hours = paste0(
+    "Los datos se concentran cerca de ",
+    round(median(df_limpio$Traditional_Study_Hours, na.rm = TRUE), 1),
+    " horas y presentan una distribución aproximadamente simétrica."
+  ),
 
   Post_Semester_GPA =
     "Los promedios se concentran en valores altos, con una acumulación importante en la calificación máxima de 4.",
 
-  Skill_Retention_Score =
-    "La mayoría de los puntajes se concentra alrededor de 76 puntos, con varios estudiantes que alcanzan 100."
+  Skill_Retention_Score = paste0(
+    "La mayoría de los puntajes se concentra alrededor de ",
+    round(median(df_limpio$Skill_Retention_Score, na.rm = TRUE), 1),
+    " puntos, con varios estudiantes que alcanzan ",
+    round(max(df_limpio$Skill_Retention_Score, na.rm = TRUE), 1),
+    "."
+  )
 )
 
 for (variable in variables_numericas_continuas) {
@@ -2889,7 +2927,7 @@ Los resultados deben interpretarse considerando tanto la significancia estadíst
 
 # Conclusiones
 
-1. El conjunto de datos se encontró completo y en condiciones adecuadas para el análisis. No se detectaron valores faltantes, registros duplicados ni valores fuera de los rangos establecidos, por lo que se conservaron los `r nrow(df_limpio)` estudiantes y las `r ncol(df_limpio)` variables
+1. El conjunto de datos se encontró completo y en condiciones adecuadas para el análisis. No se detectaron valores faltantes, registros duplicados ni valores fuera de los rangos establecidos, por lo que se conservaron los `r nrow(df_limpio)` estudiantes y las `r ncol(df_limpio)` variables.
 
 2. Las variables continuas no presentaron una distribución normal perfecta. Esto fue confirmado mediante la prueba de Lilliefors, los histogramas y los gráficos Q-Q, por lo que se utilizaron principalmente métodos no paramétricos.
 
@@ -2903,7 +2941,7 @@ Los resultados deben interpretarse considerando tanto la significancia estadíst
 
 7. El ACP permitió resumir las ocho variables numéricas utilizadas. Los dos primeros componentes explicaron aproximadamente `r percent(sum(porcentaje_varianza[1:2]), accuracy = 0.1)` de la variabilidad y los primeros tres explicaron `r percent(sum(porcentaje_varianza[1:3]), accuracy = 0.1)`.
 
-8. K-means identificó `r mejor_k` perfiles de estudiantes. El clúster `r as.character(cluster_mayor_rendimiento$Cluster)` presentó el mejor rendimiento académico y una mayor retención de habilidades; el clúster `r as.character(cluster_mayor_uso_ia$Cluster)` concentró el mayor uso de IA, junto con niveles superiores de dependencia y ansiedad; mientras que el clúster `r as.character(cluster_menor_rendimiento$Cluster)` presentó los resultados académicos más bajos.
+8. K-means identificó `r mejor_k` perfiles de estudiantes. El clúster `r as.character(cluster_mayor_rendimiento$Cluster)` presentó el mejor rendimiento académico, junto con una retención promedio de habilidades de `r round(cluster_mayor_rendimiento$Skill_Retention_Score, 3)`; el clúster `r as.character(cluster_mayor_uso_ia$Cluster)` concentró el mayor uso semanal de IA y presentó una dependencia promedio de `r round(cluster_mayor_uso_ia$Perceived_AI_Dependency, 3)` y una ansiedad promedio de `r round(cluster_mayor_uso_ia$Anxiety_Level_During_Exams, 3)`; mientras que el clúster `r as.character(cluster_menor_rendimiento$Cluster)` presentó los resultados académicos más bajos.
 
 9. La silueta promedio de `r round(silueta_promedio_final, 3)` indica que la separación entre los clústeres es `r interpretar_silueta(silueta_promedio_final)`. Por ello, los grupos deben considerarse perfiles generales con cierto traslape y no categorías completamente diferenciadas.
 
@@ -2937,12 +2975,17 @@ Los resultados deben interpretarse considerando tanto la significancia estadíst
 
 # Referencias
 
-- Kaggle. *Impact of AI on Students*. <https://www.kaggle.com/datasets/laveshjadon/ai-impact-on-students>
-- R Core Team. *R: A Language and Environment for Statistical Computing*. R Foundation for Statistical Computing.
-- Wickham, H. et al. (2019). *Welcome to the tidyverse*. Journal of Open Source Software, 4(43), 1686.
-- Jolliffe, I. T., & Cadima, J. (2016). Principal component analysis: a review and recent developments. *Philosophical Transactions of the Royal Society A*, 374.
-- MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations.
-- Rousseeuw, P. J. (1987). Silhouettes: a graphical aid to the interpretation and validation of cluster analysis. *Journal of Computational and Applied Mathematics*, 20, 53–65.
+Jadon, L. (s. f.). *Impact of AI on students* [Conjunto de datos]. Kaggle. https://www.kaggle.com/datasets/laveshjadon/ai-impact-on-students
+
+Jolliffe, I. T., & Cadima, J. (2016). Principal component analysis: A review and recent developments. *Philosophical Transactions of the Royal Society A: Mathematical, Physical and Engineering Sciences, 374*(2065), artículo 20150202. https://doi.org/10.1098/rsta.2015.0202
+
+MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations. En *Proceedings of the Fifth Berkeley Symposium on Mathematical Statistics and Probability* (Vol. 1, pp. 281–297). University of California Press.
+
+R Core Team. (2026). *R: A language and environment for statistical computing* (Versión 4.6.1) [Software de computadora]. R Foundation for Statistical Computing. https://www.r-project.org/
+
+Rousseeuw, P. J. (1987). Silhouettes: A graphical aid to the interpretation and validation of cluster analysis. *Journal of Computational and Applied Mathematics, 20*, 53–65. https://doi.org/10.1016/0377-0427(87)90125-7
+
+Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., Grolemund, G., Hayes, A., Henry, L., Hester, J., Kuhn, M., Pedersen, T. L., Miller, E., Bache, S. M., Müller, K., Ooms, J., Robinson, D., Seidel, D. P., Spinu, V., … Yutani, H. (2019). Welcome to the tidyverse. *Journal of Open Source Software, 4*(43), 1686. https://doi.org/10.21105/joss.01686
 
 # Recursos del proyecto
 
