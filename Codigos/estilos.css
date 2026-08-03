@@ -870,3 +870,29 @@ code.sourceCode {
     display: none;
   }
 }
+/* Texto de la tabla de contenido */
+.tocify,
+.tocify a,
+.tocify li,
+.tocify-item,
+.tocify-header,
+.tocify-subheader {
+  color: #000000 !important;
+}
+
+/* Opción seleccionada y al pasar el cursor */
+.tocify-focus,
+.tocify-item:hover,
+.list-group-item.active,
+.list-group-item.active:hover,
+.list-group-item.active:focus {
+  color: #000000 !important;
+}
+
+.list-group-item.active,
+.list-group-item.active:hover,
+.list-group-item.active:focus {
+  background-color: #dbeafe !important;
+  border-color: #93c5fd !important;
+  color: #000000 !important;
+}

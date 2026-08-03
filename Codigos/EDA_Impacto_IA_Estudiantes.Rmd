@@ -4,7 +4,6 @@ author:
   - "Brandon Josué Acuña Gamboa"
   - "Desmond Akin Bermúdez Rodríguez"
   - "Andrey Calderón Vega"
-  - "Erick Andrés Picado Mora"
 date: "03 de agosto de 2026"
 output:
   html_document:
@@ -51,11 +50,9 @@ set.seed(142)
 
 # Introducción
 
-La inteligencia artificial generativa se ha incorporado rápidamente a las actividades académicas. Los estudiantes pueden utilizarla para resumir lecturas, resolver dudas, generar borradores, obtener ideas o apoyar procesos de programación. Sin embargo, su uso también puede relacionarse con dependencia tecnológica, cambios en los hábitos de estudio, ansiedad, retención de habilidades y riesgo de agotamiento académico.
+El uso de inteligencia artificial entre los estudiantes ha aumentado, pero no está claro si utilizarla más se relaciona con mejores resultados académicos o con problemas como dependencia, ansiedad, menor retención de habilidades y agotamiento.
 
-Este proyecto realiza una exploración completa del conjunto de datos **Impact of AI on Students**. El trabajo incluye la lectura, revisión, limpieza y preparación de los datos; análisis univariado, bivariado y multivariado; aplicación de un Análisis de Componentes Principales (ACP); y construcción de grupos de estudiantes mediante el algoritmo K-means.
-
-El análisis describe asociaciones y perfiles presentes en los datos. Debido a que se trata de un estudio observacional, los resultados no deben interpretarse como evidencia de causalidad.
+Por esta razón, analizamos los datos de 50 000 estudiantes para identificar cómo se relacionan el uso de IA, los hábitos de estudio y el rendimiento académico, además de reconocer diferentes perfiles de estudiantes. El análisis muestra relaciones, pero no permite afirmar que la IA sea la causa directa de los resultados.
 
 # Objetivos
 
@@ -111,46 +108,160 @@ El análisis utiliza la información disponible en el archivo original. Las rela
 
 # Librerías y diccionario de variables
 
-```{r diccionario-variables}
+## Librerías utilizadas
+
+Las librerías permiten preparar los datos, crear tablas y gráficos, aplicar pruebas estadísticas y evaluar los grupos encontrados.
+
+```{r cargar-librerias}
 library(tidyverse)
 library(knitr)
 library(scales)
 library(cluster)
 library(nortest)
-
-diccionario <- tribble(
-  ~Variable, ~Tipo, ~Valores_o_rango, ~Descripcion,
-  "Student_ID", "Identificadora", "100001 a 150000", "Identificador único del estudiante.",
-  "Major_Category", "Categórica nominal", "Arts, Business, Humanities, Medical, STEM", "Área académica principal.",
-  "Year_of_Study", "Categórica ordinal", "Freshman a Graduate", "Etapa académica del estudiante.",
-  "Pre_Semester_GPA", "Numérica continua", "Aproximadamente 0 a 4", "Promedio académico antes del semestre.",
-  "Weekly_GenAI_Hours", "Numérica continua", "0 horas o más", "Horas semanales de uso de IA generativa.",
-  "Primary_Use_Case", "Categórica nominal", "Cinco categorías", "Actividad principal apoyada por IA.",
-  "Prompt_Engineering_Skill", "Categórica ordinal", "Beginner, Intermediate, Advanced", "Nivel de habilidad para construir prompts.",
-  "Tool_Diversity", "Numérica discreta", "1 a 5", "Cantidad de herramientas de IA utilizadas.",
-  "Paid_Subscription", "Lógica", "TRUE o FALSE", "Indica si tiene una suscripción pagada.",
-  "Traditional_Study_Hours", "Numérica continua", "0 horas o más", "Horas semanales de estudio sin IA.",
-  "Perceived_AI_Dependency", "Numérica ordinal", "1 a 10", "Dependencia percibida de la IA.",
-  "Institutional_Policy", "Categórica ordinal", "Strict_Ban a Actively_Encouraged", "Política institucional sobre el uso de IA.",
-  "Anxiety_Level_During_Exams", "Numérica ordinal", "1 a 10", "Ansiedad durante los exámenes.",
-  "Post_Semester_GPA", "Numérica continua", "0 a 4", "Promedio académico después del semestre.",
-  "Skill_Retention_Score", "Numérica continua", "0 a 100", "Puntaje de retención de habilidades.",
-  "Burnout_Risk_Level", "Categórica ordinal", "Low, Medium, High", "Nivel de riesgo de agotamiento académico."
-)
-
-kable(diccionario, caption = "Diccionario de variables")
 ```
-
 
 Las funciones principales utilizadas pertenecen a:
 
-- **tidyverse:** manipulación, transformación y visualización.
-- **knitr:** presentación de tablas y generación del HTML.
+- **tidyverse:** limpieza, transformación y visualización de los datos.
+- **knitr:** presentación de tablas y generación del informe.
 - **scales:** formato de porcentajes y etiquetas.
-- **cluster:** evaluación de clústeres mediante silueta.
-- **nortest:** prueba de normalidad de Lilliefors.
+- **cluster:** evaluación de los clústeres mediante la silueta.
+- **nortest:** aplicación de la prueba de normalidad de Lilliefors.
 
-# Carga de los datos
+## Variables académicas y generales
+
+Estas variables describen la identificación del estudiante, su área académica, su etapa de estudio y su rendimiento.
+
+```{r variables-academicas}
+variables_academicas <- tribble(
+  ~Variable_original, ~Nombre_en_espanol, ~Forma_de_medicion, ~Significado,
+
+  "Student_ID",
+  "Identificador del estudiante",
+  "Código único entre 100001 y 150000",
+  "Permite diferenciar a cada estudiante. No se utiliza en los cálculos.",
+
+  "Major_Category",
+  "Área académica",
+  "Artes, Negocios, Humanidades, Medicina o STEM",
+  "Indica el área principal de estudio. STEM significa Ciencia, Tecnología, Ingeniería y Matemáticas.",
+
+  "Year_of_Study",
+  "Año de estudio",
+  "Primer año, segundo año, tercer año, cuarto año o posgrado",
+  "Indica la etapa académica en la que se encuentra el estudiante.",
+
+  "Pre_Semester_GPA",
+  "Promedio antes del semestre",
+  "Escala de 0 a 4",
+  "Mide el rendimiento académico antes de comenzar el semestre. Un valor mayor representa mejores calificaciones.",
+
+  "Post_Semester_GPA",
+  "Promedio después del semestre",
+  "Escala de 0 a 4",
+  "Mide el rendimiento académico al finalizar el semestre. Un valor mayor representa mejores calificaciones.",
+
+  "Traditional_Study_Hours",
+  "Horas de estudio tradicional",
+  "Horas por semana",
+  "Cantidad de horas semanales que el estudiante estudia sin utilizar inteligencia artificial."
+)
+
+kable(
+  variables_academicas,
+  caption = "Variables académicas y generales"
+)
+```
+
+## Variables relacionadas con el uso de inteligencia artificial
+
+Estas variables permiten conocer cuánto se utiliza la IA, para qué se emplea y el nivel de experiencia del estudiante.
+
+```{r variables-uso-ia}
+variables_ia <- tribble(
+  ~Variable_original, ~Nombre_en_espanol, ~Forma_de_medicion, ~Significado,
+
+  "Weekly_GenAI_Hours",
+  "Horas semanales de uso de IA",
+  "Horas por semana",
+  "Cantidad de horas que el estudiante utiliza herramientas de inteligencia artificial generativa.",
+
+  "Primary_Use_Case",
+  "Uso principal de la IA",
+  "Categorías de uso",
+  "Redacción y borradores, depuración de problemas, generación de ideas, resumen de lecturas o respuestas directas.",
+
+  "Prompt_Engineering_Skill",
+  "Habilidad para crear prompts",
+  "Principiante, intermedio o avanzado",
+  "Indica el nivel de habilidad para escribir instrucciones claras a una herramienta de IA.",
+
+  "Tool_Diversity",
+  "Diversidad de herramientas",
+  "Cantidad de herramientas, de 1 a 5",
+  "Número de herramientas de inteligencia artificial que utiliza el estudiante.",
+
+  "Paid_Subscription",
+  "Suscripción pagada",
+  "Sí o no",
+  "Indica si el estudiante paga una suscripción para utilizar alguna herramienta de IA.",
+
+  "Institutional_Policy",
+  "Política institucional",
+  "Prohibición estricta, permitido con citación o promovido activamente",
+  "Indica la posición de la institución educativa sobre el uso de inteligencia artificial."
+)
+
+kable(
+  variables_ia,
+  caption = "Variables relacionadas con el uso de inteligencia artificial"
+)
+```
+
+## Variables personales y de bienestar
+
+Estas variables representan percepciones y resultados relacionados con la dependencia, la ansiedad, la retención y el agotamiento académico.
+
+```{r variables-bienestar}
+variables_bienestar <- tribble(
+  ~Variable_original, ~Nombre_en_espanol, ~Forma_de_medicion, ~Significado,
+
+  "Perceived_AI_Dependency",
+  "Dependencia percibida de la IA",
+  "Escala de 1 a 10",
+  "Un valor bajo representa poca dependencia y un valor alto representa mayor dependencia.",
+
+  "Anxiety_Level_During_Exams",
+  "Ansiedad durante los exámenes",
+  "Escala de 1 a 10",
+  "Un valor bajo representa poca ansiedad y un valor alto representa mayor ansiedad.",
+
+  "Skill_Retention_Score",
+  "Retención de habilidades",
+  "Puntaje de 0 a 100",
+  "Mide cuánto conserva el estudiante las habilidades aprendidas. Un valor mayor representa mejor retención.",
+
+  "Burnout_Risk_Level",
+  "Riesgo de agotamiento académico",
+  "Bajo, medio o alto",
+  "Representa el nivel de riesgo de cansancio o agotamiento relacionado con las actividades académicas."
+)
+
+kable(
+  variables_bienestar,
+  caption = "Variables personales y de bienestar"
+)
+
+diccionario <- bind_rows(
+  variables_academicas,
+  variables_ia,
+  variables_bienestar
+)
+```
+
+Las variables se organizaron en tres grupos para facilitar su comprensión. Algunas se miden en horas por semana, otras utilizan escalas numéricas y otras se representan mediante categorías. Esta descripción permite interpretar correctamente los resultados obtenidos en los análisis posteriores.
+
+# Carga y revisión de datos
 
 ## Ubicación esperada
 
@@ -213,7 +324,9 @@ cantidad_identificadoras <- as.integer(
 
 ## Revisión inicial
 
-El conjunto de datos contiene `r nrow(df_original)` registros y `r ncol(df_original)` variables. De ellas, `r cantidad_numericas` son numéricas y fueron reconocidas correctamente, mientras que `r cantidad_categoricas` son categóricas y se cargaron como texto, por lo que se convertirán posteriormente. Además, se identificó `r cantidad_identificadoras` variable identificadora y `r cantidad_logicas` variable lógica.
+El conjunto de datos contiene `r nrow(df_original)` registros y `r ncol(df_original)` variables. De ellas, `r cantidad_numericas` son numéricas, `r cantidad_categoricas` se cargaron como texto, `r cantidad_identificadoras` corresponde a una variable identificadora y `r cantidad_logicas` fueron reconocidas inicialmente como lógicas.
+
+Cada fila representa a un estudiante y cada columna representa una característica académica, personal o relacionada con el uso de inteligencia artificial.
 
 ```{r revision-inicial}
 dim(df_original)
@@ -221,9 +334,11 @@ head(df_original)
 tail(df_original)
 summary(df_original)
 str(df_original)
-colnames(df_original)
-
 ```
+
+`dim()` muestra las dimensiones del conjunto de datos, `head()` y `tail()` permiten observar los primeros y últimos registros, `summary()` presenta un resumen estadístico y `str()` muestra el tipo de dato detectado en cada variable.
+
+## Resumen general
 
 ```{r resumen-inicial}
 resumen_inicial <- tibble(
@@ -257,6 +372,171 @@ kable(
 )
 ```
 
+Esta revisión permite confirmar el tamaño del archivo y detectar rápidamente posibles problemas antes de iniciar la limpieza.
+
+## Revisión de las categorías
+
+Se revisaron las categorías presentes en las variables de texto, junto con su cantidad de registros y el porcentaje que representan.
+
+```{r revision-categorias}
+variables_categoricas_revision <- c(
+  "Área académica" = "Major_Category",
+  "Año de estudio" = "Year_of_Study",
+  "Uso principal de la IA" = "Primary_Use_Case",
+  "Habilidad para crear prompts" = "Prompt_Engineering_Skill",
+  "Suscripción pagada" = "Paid_Subscription",
+  "Política institucional" = "Institutional_Policy",
+  "Riesgo de agotamiento" = "Burnout_Risk_Level"
+)
+
+revision_categorias <- map_dfr(
+  names(variables_categoricas_revision),
+  function(nombre) {
+
+    variable <- variables_categoricas_revision[[nombre]]
+
+    df_original %>%
+      count(
+        Categoria = .data[[variable]],
+        name = "Cantidad"
+      ) %>%
+      mutate(
+        Variable = nombre,
+        Porcentaje = percent(
+          Cantidad / sum(Cantidad),
+          accuracy = 0.1
+        )
+      ) %>%
+      select(
+        Variable,
+        Categoria,
+        Cantidad,
+        Porcentaje
+      )
+  }
+)
+
+kable(
+  revision_categorias,
+  caption = "Categorías encontradas en el conjunto de datos"
+)
+```
+
+Esta tabla permite comprobar cuáles categorías existen, cuántas veces aparece cada una y si existen valores inesperados o escritos de forma diferente.
+
+## Revisión de las variables medidas mediante escalas
+
+Las variables de dependencia, ansiedad y cantidad de herramientas utilizan valores enteros. Se contó cuántos estudiantes presentan cada valor.
+
+```{r revision-escalas}
+variables_escalas <- c(
+  "Diversidad de herramientas" = "Tool_Diversity",
+  "Dependencia percibida de la IA" = "Perceived_AI_Dependency",
+  "Ansiedad durante los exámenes" = "Anxiety_Level_During_Exams"
+)
+
+revision_escalas <- map_dfr(
+  names(variables_escalas),
+  function(nombre) {
+
+    variable <- variables_escalas[[nombre]]
+
+    df_original %>%
+      count(
+        Valor = .data[[variable]],
+        name = "Cantidad"
+      ) %>%
+      mutate(
+        Variable = nombre,
+        Porcentaje = percent(
+          Cantidad / sum(Cantidad),
+          accuracy = 0.1
+        )
+      ) %>%
+      select(
+        Variable,
+        Valor,
+        Cantidad,
+        Porcentaje
+      )
+  }
+)
+
+kable(
+  revision_escalas,
+  caption = "Distribución de las variables medidas mediante escalas"
+)
+```
+
+Esta revisión permite observar, por ejemplo, cuántos estudiantes tienen niveles bajos, medios o altos de dependencia y ansiedad.
+
+## Cantidad de registros en los valores extremos
+
+El resumen estadístico muestra los valores mínimos y máximos, pero no indica cuántos estudiantes presentan esos valores. Por esta razón, se realizó un conteo adicional.
+
+```{r revision-extremos}
+variables_extremos <- c(
+  "Promedio previo al semestre" = "Pre_Semester_GPA",
+  "Horas semanales de uso de IA" = "Weekly_GenAI_Hours",
+  "Horas de estudio tradicional" = "Traditional_Study_Hours",
+  "Promedio posterior al semestre" = "Post_Semester_GPA",
+  "Retención de habilidades" = "Skill_Retention_Score"
+)
+
+revision_extremos <- map_dfr(
+  names(variables_extremos),
+  function(nombre) {
+
+    variable <- variables_extremos[[nombre]]
+    valores <- df_original[[variable]]
+
+    minimo <- min(valores, na.rm = TRUE)
+    maximo <- max(valores, na.rm = TRUE)
+
+    tibble(
+      Variable = nombre,
+      Minimo = minimo,
+      Cantidad_en_minimo = sum(valores == minimo, na.rm = TRUE),
+      Maximo = maximo,
+      Cantidad_en_maximo = sum(valores == maximo, na.rm = TRUE)
+    )
+  }
+)
+
+kable(
+  revision_extremos,
+  digits = 3,
+  caption = "Cantidad de registros en los valores mínimos y máximos"
+)
+```
+
+Esta tabla permite conocer cuántos estudiantes alcanzaron valores como un GPA de 4, una retención de 100 puntos o el máximo de horas semanales de uso de IA.
+
+## Uso inicial de memoria
+
+También se calculó cuánto espacio ocupa el conjunto de datos original en memoria. Este valor se utilizará posteriormente para compararlo con el dataset preparado.
+
+```{r memoria-inicial}
+memoria_original_mb <- as.numeric(
+  object.size(df_original)
+) / 1024^2
+
+tabla_memoria_inicial <- tibble(
+  Objeto = "Dataset original",
+  Memoria_MB = memoria_original_mb
+)
+
+kable(
+  tabla_memoria_inicial,
+  digits = 2,
+  caption = "Uso inicial de memoria"
+)
+```
+
+## Resultado de la revisión
+
+El archivo se cargó correctamente y contiene `r nrow(df_original)` estudiantes y `r ncol(df_original)` variables. La revisión permitió conocer su estructura, las categorías existentes, la distribución de las escalas, la cantidad de registros en los valores extremos y el consumo inicial de memoria. Estos resultados servirán como base para el proceso de limpieza y preparación.
+
 # Limpieza y preparación
 
 ## Normalización de textos
@@ -281,12 +561,7 @@ df_limpio <- df_limpio %>%
       levels = c("Freshman", "Sophomore", "Junior", "Senior", "Graduate"),
       ordered = TRUE
     ),
-    Primary_Use_Case = factor(Primary_Use_Case),
-    Prompt_Engineering_Skill = factor(
-      Prompt_Engineering_Skill,
-      levels = c("Beginner", "Intermediate", "Advanced"),
-      ordered = TRUE
-    ),
+   
     Paid_Subscription = case_when(
       tolower(as.character(Paid_Subscription)) %in% c("true", "1", "yes", "si", "sí") ~ TRUE,
       tolower(as.character(Paid_Subscription)) %in% c("false", "0", "no") ~ FALSE,
@@ -437,41 +712,151 @@ kable(tabla_atipicos, digits = 3, caption = "Valores atípicos por variable")
 Se identificaron valores atípicos mediante el rango intercuartílico. La mayor cantidad de valores atípicos se encontró en `r tabla_atipicos$Variable[which.max(tabla_atipicos$Cantidad_atipicos)]`, con `r max(tabla_atipicos$Cantidad_atipicos)` casos. Estos valores se conservaron porque se encuentran dentro de rangos válidos y pueden representar comportamientos reales.
 
 
+## Comparación del uso de memoria
+
+Al finalizar la limpieza, se comparó el espacio ocupado por el dataset original y el dataset preparado.
+```{r}
+memoria_original_mb <- as.numeric(
+  object.size(df_original)
+) / 1024^2
+
+memoria_limpia_mb <- as.numeric(
+  object.size(df_limpio)
+) / 1024^2
+
+diferencia_mb <- memoria_original_mb - memoria_limpia_mb
+
+porcentaje_cambio <- (
+  abs(diferencia_mb) / memoria_original_mb
+) * 100
+
+if (diferencia_mb > 0) {
+
+  tipo_cambio <- "Reducción"
+
+  texto_cambio <- paste0(
+    tipo_cambio,
+    " del ",
+    round(porcentaje_cambio, 2),
+    "%"
+  )
+
+} else if (diferencia_mb < 0) {
+
+  tipo_cambio <- "Aumento"
+
+  texto_cambio <- paste0(
+    tipo_cambio,
+    " del ",
+    round(porcentaje_cambio, 2),
+    "%"
+  )
+
+} else {
+
+  tipo_cambio <- "Sin cambio"
+  texto_cambio <- "Sin cambio"
+
+}
+
+comparacion_memoria <- tibble(
+  Dataset = c("Original", "Limpio"),
+  Memoria_MB = c(
+    memoria_original_mb,
+    memoria_limpia_mb
+  )
+)
+
+kable(
+  comparacion_memoria,
+  digits = 2,
+  caption = "Comparación del uso de memoria"
+)
+
+if (diferencia_mb > 0) {
+
+  cat(
+    "\nEl dataset limpio utiliza",
+    round(diferencia_mb, 2),
+    "MB menos, lo que representa una reducción del",
+    round(porcentaje_cambio, 2),
+    "%."
+  )
+
+} else if (diferencia_mb < 0) {
+
+  cat(
+    "\nEl dataset limpio utiliza",
+    round(abs(diferencia_mb), 2),
+    "MB más, lo que representa un aumento del",
+    round(porcentaje_cambio, 2),
+    "%."
+  )
+
+} else {
+
+  cat(
+    "\nEl dataset original y el limpio utilizan la misma cantidad de memoria."
+  )
+
+}
+```
+
+
+
+La comparación muestra si la conversión de textos a factores y la preparación de los tipos de datos redujeron o aumentaron el espacio utilizado en memoria.
+
 ## Resultado de la limpieza
 
-El conjunto de datos no presentó valores faltantes, duplicados ni valores fuera de rango. Por lo tanto, se conservaron las `r nrow(df_limpio)` filas y las `r ncol(df_limpio)` variables para continuar con el análisis.
+El dataset no presentó valores faltantes, duplicados ni valores fuera de los rangos esperados. Los valores atípicos se conservaron porque son posibles y pueden representar comportamientos reales. El dataset limpio mantiene todos los registros y será utilizado en los análisis posteriores.
+
 
 ```{r resultado-limpieza}
 resumen_limpieza <- tibble(
   Indicador = c(
     "Filas originales",
-    "Valores faltantes",
+    "Valores faltantes encontrados",
+    "Filas eliminadas por faltantes",
     "Filas duplicadas",
+    "Identificadores duplicados",
     "Valores fuera de rango",
     "Filas finales",
-    "Columnas finales"
+    "Columnas finales",
+    "Memoria original",
+    "Memoria del dataset limpio",
+    "Cambio de memoria"
   ),
-  Cantidad = c(
+  Resultado = c(
     nrow(df_original),
     sum(faltantes_por_variable$Valores_faltantes),
+    filas_eliminadas_faltantes,
     duplicados_completos,
+    duplicados_id,
     sum(validacion_rangos$Registros_invalidos),
     nrow(df_limpio),
-    ncol(df_limpio)
+    ncol(df_limpio),
+    paste0(round(memoria_original_mb, 2), " MB"),
+    paste0(round(memoria_limpia_mb, 2), " MB"),
+    paste0(
+      tipo_cambio, " del ",
+      round(porcentaje_cambio, 2), "%"
+    )
   )
 )
 
 kable(
   resumen_limpieza,
-  caption = "Resultado del proceso de limpieza"
+  caption = "Resultado final del proceso de limpieza"
 )
 ```
 
-# Clasificación de variables
+# Clasificación estadística de las variables
 
-Las variables se clasificaron según su tipo para seleccionar correctamente los análisis estadísticos y gráficos. Student_ID se utiliza únicamente como identificador y no participa en los cálculos.
+Las variables se clasificaron según su naturaleza estadística para seleccionar correctamente las medidas, gráficos y pruebas que se utilizarán en los análisis posteriores. `Student_ID` se conserva únicamente como identificador y no participa en los cálculos.
 
 ```{r clasificacion-variables}
+
+# Variables numéricas continuas
 variables_numericas_continuas <- c(
   "Pre_Semester_GPA",
   "Weekly_GenAI_Hours",
@@ -480,17 +865,29 @@ variables_numericas_continuas <- c(
   "Skill_Retention_Score"
 )
 
-variables_numericas_discretas <- c(
-  "Tool_Diversity",
+# Variable numérica discreta
+variable_numerica_discreta <- "Tool_Diversity"
+
+# Escalas ordinales numéricas
+variables_escalas_ordinales <- c(
   "Perceived_AI_Dependency",
   "Anxiety_Level_During_Exams"
 )
 
+# Se conserva este objeto porque se utiliza más adelante
+# en el bloque resumen-numerico
+variables_numericas_discretas <- c(
+  variable_numerica_discreta,
+  variables_escalas_ordinales
+)
+
+# Variables categóricas nominales
 variables_categoricas_nominales <- c(
   "Major_Category",
   "Primary_Use_Case"
 )
 
+# Variables categóricas ordinales
 variables_categoricas_ordinales <- c(
   "Year_of_Study",
   "Prompt_Engineering_Skill",
@@ -498,245 +895,90 @@ variables_categoricas_ordinales <- c(
   "Burnout_Risk_Level"
 )
 
-variable_logica <- "Paid_Subscription"
+# Variable categórica dicotómica
+variable_dicotomica <- "Paid_Subscription"
 
+# Variable identificadora
+variable_identificadora <- "Student_ID"
+
+variable_logica <- variable_dicotomica
+
+# Tabla de clasificación
 clasificacion <- tibble(
-  Clasificacion = c(
+  Tipo_de_variable = c(
     "Numéricas continuas",
-    "Numéricas discretas u ordinales",
+    "Numérica discreta",
+    "Escalas ordinales numéricas",
     "Categóricas nominales",
     "Categóricas ordinales",
-    "Lógica",
+    "Categórica dicotómica",
     "Identificadora"
   ),
+
+  Cantidad = c(
+    length(variables_numericas_continuas),
+    length(variable_numerica_discreta),
+    length(variables_escalas_ordinales),
+    length(variables_categoricas_nominales),
+    length(variables_categoricas_ordinales),
+    length(variable_dicotomica),
+    length(variable_identificadora)
+  ),
+
   Variables = c(
     paste(variables_numericas_continuas, collapse = ", "),
-    paste(variables_numericas_discretas, collapse = ", "),
+    variable_numerica_discreta,
+    paste(variables_escalas_ordinales, collapse = ", "),
     paste(variables_categoricas_nominales, collapse = ", "),
     paste(variables_categoricas_ordinales, collapse = ", "),
-    variable_logica,
-    "Student_ID"
+    variable_dicotomica,
+    variable_identificadora
+  ),
+
+  Uso_en_el_analisis = c(
+    "Estadísticas, distribuciones, correlaciones, ACP y K-means",
+    "Frecuencias, porcentajes y comparaciones",
+    "Frecuencias, medianas y comparaciones ordinales",
+    "Frecuencias, porcentajes y pruebas de asociación",
+    "Frecuencias, orden y comparaciones entre niveles",
+    "Comparación entre dos grupos",
+    "Identificación de registros; se excluye de los cálculos"
   )
 )
 
-kable(clasificacion, caption = "Clasificación de las variables")
+kable(
+  clasificacion,
+  caption = "Clasificación estadística y uso de las variables",
+  align = c("l", "c", "l", "l")
+)
 ```
+
+Esta clasificación permite aplicar a cada variable las técnicas estadísticas adecuadas según su naturaleza.
 
 # Análisis univariado
 
-## Variables numéricas
+## Preparación de etiquetas
 
-Se calcularon medidas de posición y dispersión para conocer el comportamiento de las variables numéricas, incluyendo mínimo, máximo, media, mediana, cuartiles, desviación estándar, varianza y rango intercuartílico.
-```{r resumen-numerico}
-variables_numericas <- c(
-  variables_numericas_continuas,
-  variables_numericas_discretas
-)
-
-resumen_numerico <- df_limpio %>%
-  select(all_of(variables_numericas)) %>%
-  pivot_longer(
-    cols = everything(),
-    names_to = "Variable",
-    values_to = "Valor"
-  ) %>%
-  group_by(Variable) %>%
-  summarise(
-    N = n(),
-    Minimo = min(Valor),
-    Q1 = quantile(Valor, 0.25),
-    Media = mean(Valor),
-    Mediana = median(Valor),
-    Q3 = quantile(Valor, 0.75),
-    Maximo = max(Valor),
-    Desviacion = sd(Valor),
-    Varianza = var(Valor),
-    IQR = IQR(Valor),
-    .groups = "drop"
-  )
-
-kable(
-  resumen_numerico,
-  digits = 3,
-  caption = "Estadísticos descriptivos de las variables numéricas"
-)
-```
-
-Los resultados muestran que el promedio posterior al semestre fue de `r format(round(mean(df_limpio$Post_Semester_GPA), 3), decimal.mark = ",", nsmall = 3)`, superior al promedio previo de `r format(round(mean(df_limpio$Pre_Semester_GPA), 3), decimal.mark = ",", nsmall = 3)`. El uso semanal de IA presentó una media de `r format(round(mean(df_limpio$Weekly_GenAI_Hours), 3), decimal.mark = ",", nsmall = 3)` horas y una mediana de `r format(round(median(df_limpio$Weekly_GenAI_Hours), 1), decimal.mark = ",", nsmall = 1)` horas, lo que indica que algunos estudiantes registran un uso considerablemente mayor. El puntaje promedio de retención de habilidades fue de `r format(round(mean(df_limpio$Skill_Retention_Score), 3), decimal.mark = ",", nsmall = 3)`.
-
-
-### Histogramas
-
-Se utilizaron histogramas para observar la distribución de las variables numéricas continuas. La línea discontinua representa la media de cada variable.
-
-```{r histogramas-numericos, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+```{r etiquetas-univariado, include=FALSE}
 etiquetas_variables <- c(
-  Pre_Semester_GPA = "Promedio previo al semestre",
+  Pre_Semester_GPA = "Promedio previo al semestre (GPA)",
   Weekly_GenAI_Hours = "Horas semanales de uso de IA",
-  Traditional_Study_Hours = "Horas de estudio tradicional",
-  Post_Semester_GPA = "Promedio posterior al semestre",
-  Skill_Retention_Score = "Puntaje de retención de habilidades"
+  Traditional_Study_Hours = "Horas semanales de estudio tradicional",
+  Post_Semester_GPA = "Promedio posterior al semestre (GPA)",
+  Skill_Retention_Score = "Puntaje de retención de habilidades",
+  Tool_Diversity = "Cantidad de herramientas de IA",
+  Perceived_AI_Dependency = "Dependencia percibida de la IA",
+  Anxiety_Level_During_Exams = "Ansiedad durante los exámenes",
+  Major_Category = "Área académica",
+  Year_of_Study = "Año de estudio",
+  Primary_Use_Case = "Uso principal de la IA",
+  Prompt_Engineering_Skill = "Habilidad en creación de prompts",
+  Paid_Subscription = "Suscripción de pago",
+  Institutional_Policy = "Política institucional",
+  Burnout_Risk_Level = "Nivel de riesgo de agotamiento",
+  Student_ID = "Identificador del estudiante"
 )
 
-comentarios_histogramas <- c(
-  Pre_Semester_GPA =
-    "La mayoría de los estudiantes presenta promedios altos, con pocos casos en valores bajos.",
-
-  Weekly_GenAI_Hours =
-    "Predominan pocas horas de uso de IA, aunque algunos estudiantes alcanzan valores elevados.",
-
-  Traditional_Study_Hours = paste0(
-    "Los datos se concentran cerca de ",
-    round(median(df_limpio$Traditional_Study_Hours, na.rm = TRUE), 1),
-    " horas y presentan una distribución aproximadamente simétrica."
-  ),
-
-  Post_Semester_GPA =
-    "Los promedios se concentran en valores altos, con una acumulación importante en la calificación máxima de 4.",
-
-  Skill_Retention_Score = paste0(
-    "La mayoría de los puntajes se concentra alrededor de ",
-    round(median(df_limpio$Skill_Retention_Score, na.rm = TRUE), 1),
-    " puntos, con varios estudiantes que alcanzan ",
-    round(max(df_limpio$Skill_Retention_Score, na.rm = TRUE), 1),
-    "."
-  )
-)
-
-for (variable in variables_numericas_continuas) {
-
-  grafico <- ggplot(df_limpio, aes(x = .data[[variable]])) +
-    geom_histogram(
-      bins = 35,
-      fill = "#2C7FB8",
-      color = "white"
-    ) +
-    geom_vline(
-      xintercept = mean(df_limpio[[variable]], na.rm = TRUE),
-      linetype = "dashed",
-      linewidth = 0.8
-    ) +
-    labs(
-      title = paste("Distribución de", etiquetas_variables[[variable]]),
-      subtitle = "La línea discontinua representa la media",
-      x = etiquetas_variables[[variable]],
-      y = "Frecuencia"
-    ) +
-    theme_minimal()
-
-  print(grafico)
-
-  cat(
-    paste0(
-      "\n<div class='comentario-histograma'>",
-      comentarios_histogramas[[variable]],
-      "</div>",
-      "<div class='espacio-histograma'></div>\n"
-    )
-  )
-}
-```
-
-Las distribuciones permiten observar diferencias en la concentración y dispersión de los datos. Las horas semanales de uso de IA presentan una mayor acumulación en valores bajos y algunos casos con uso elevado.
-
-### Boxplots
-
-Se utilizaron diagramas de caja para observar la mediana, la dispersión y los posibles valores atípicos de las variables numéricas continuas.
-
-```{r boxplots-numericos, fig.height=4, fig.show='asis', results='asis'}
-for (variable in variables_numericas_continuas) {
-
-  grafico <- ggplot(df_limpio, aes(y = .data[[variable]])) +
-    geom_boxplot(
-      fill = "#7FCDBB",
-      outlier.alpha = 0.35
-    ) +
-    labs(
-      title = paste(
-        "Diagrama de caja de",
-        etiquetas_variables[[variable]]
-      ),
-      x = "",
-      y = etiquetas_variables[[variable]]
-    ) +
-    theme_minimal()
-
-  print(grafico)
-
-  cat("\n<div class='espacio-boxplot'></div>\n")
-}
-```
-
-Los boxplots confirmaron la presencia de algunos valores atípicos, principalmente en las horas semanales de uso de IA. Estos valores se conservaron porque se encuentran dentro de rangos válidos.
-
-### Evaluación de normalidad
-
-Se aplicó la prueba de Lilliefors para evaluar la normalidad de las variables continuas. Un valor p menor a 0,05 indica que la variable no sigue una distribución normal.
-
-```{r normalidad}
-set.seed(142)
-
-normalidad <- map_dfr(
-  variables_numericas_continuas,
-  function(variable) {
-    valores <- na.omit(df_limpio[[variable]])
-
-    if (length(valores) > 5000) {
-      valores <- sample(valores, 5000)
-    }
-
-    prueba <- lillie.test(valores)
-
-    tibble(
-      Variable = etiquetas_variables[[variable]],
-      D = as.numeric(prueba$statistic),
-      P_valor = prueba$p.value,
-      Decision = if_else(
-        prueba$p.value < 0.05,
-        "Se rechaza normalidad",
-        "No se rechaza normalidad"
-      )
-    )
-  }
-)
-
-kable(normalidad, digits = 5, caption = "Prueba de normalidad de Lilliefors")
-```
-Los resultados rechazaron la normalidad en las variables evaluadas, por lo que en los análisis posteriores se prefieren métodos no paramétricos, como la correlación de Spearman.
-
-### Gráficos Q-Q
-
-Los gráficos Q-Q comparan los datos observados con una distribución normal. Cuando los puntos se mantienen cerca de la línea, la variable presenta un comportamiento aproximadamente normal.
-
-```{r etiquetas-visibles, include=FALSE}
-# Se agregan las traducciones que faltan al objeto creado anteriormente.
-etiquetas_variables[c(
-  "Tool_Diversity",
-  "Perceived_AI_Dependency",
-  "Anxiety_Level_During_Exams",
-  "Major_Category",
-  "Year_of_Study",
-  "Primary_Use_Case",
-  "Prompt_Engineering_Skill",
-  "Paid_Subscription",
-  "Institutional_Policy",
-  "Burnout_Risk_Level",
-  "Student_ID"
-)] <- c(
-  "Diversidad de herramientas",
-  "Dependencia percibida de la IA",
-  "Ansiedad durante los exámenes",
-  "Área académica",
-  "Año de estudio",
-  "Uso principal de la IA",
-  "Habilidad en creación de prompts",
-  "Suscripción de pago",
-  "Política institucional",
-  "Nivel de riesgo de agotamiento",
-  "Identificador del estudiante"
-)
-
-# Devuelve el nombre en español de una variable.
 nombre_variable <- function(variable) {
   if (variable %in% names(etiquetas_variables)) {
     etiquetas_variables[[variable]]
@@ -745,7 +987,6 @@ nombre_variable <- function(variable) {
   }
 }
 
-# Traducción de las categorías visibles.
 etiquetas_categorias <- c(
   "Arts" = "Artes",
   "Business" = "Negocios",
@@ -794,7 +1035,279 @@ traducir_categoria <- function(x) {
 }
 ```
 
+## Variables numéricas
+
+Se calcularon medidas de posición y dispersión para conocer el comportamiento general de las variables numéricas.
+
+```{r resumen-numerico}
+variables_numericas <- c(
+  variables_numericas_continuas,
+  variables_numericas_discretas
+)
+
+resumen_numerico <- df_limpio %>%
+  select(all_of(variables_numericas)) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Variable",
+    values_to = "Valor"
+  ) %>%
+  group_by(Variable) %>%
+  summarise(
+    N = sum(!is.na(Valor)),
+    Minimo = min(Valor, na.rm = TRUE),
+    Q1 = quantile(Valor, 0.25, na.rm = TRUE),
+    Media = mean(Valor, na.rm = TRUE),
+    Mediana = median(Valor, na.rm = TRUE),
+    Q3 = quantile(Valor, 0.75, na.rm = TRUE),
+    Maximo = max(Valor, na.rm = TRUE),
+    Desviacion = sd(Valor, na.rm = TRUE),
+    Varianza = var(Valor, na.rm = TRUE),
+    IQR = IQR(Valor, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Variable = sapply(Variable, nombre_variable)
+  )
+
+kable(
+  resumen_numerico,
+  digits = 3,
+  caption = "Estadísticos descriptivos de las variables numéricas"
+)
+```
+
+El promedio posterior al semestre fue de `r format(round(mean(df_limpio$Post_Semester_GPA), 3), decimal.mark = ",", nsmall = 3)`, mientras que el promedio previo fue de `r format(round(mean(df_limpio$Pre_Semester_GPA), 3), decimal.mark = ",", nsmall = 3)`. El uso semanal de IA presentó una media de `r format(round(mean(df_limpio$Weekly_GenAI_Hours), 3), decimal.mark = ",", nsmall = 3)` horas y una mediana de `r format(round(median(df_limpio$Weekly_GenAI_Hours), 1), decimal.mark = ",", nsmall = 1)` horas.
+
+### Histogramas
+
+Los histogramas permiten observar dónde se concentran los datos y la forma de cada distribución. La línea discontinua representa la media y la línea punteada representa la mediana.
+
+```{r histogramas-numericos, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+comentarios_histogramas <- c(
+  Pre_Semester_GPA =
+    "Los promedios previos se concentran principalmente en valores altos, con pocos casos en la parte baja.",
+
+  Weekly_GenAI_Hours =
+    "La mayoría utiliza la IA pocas horas por semana, mientras que una cantidad menor registra usos elevados.",
+
+  Traditional_Study_Hours =
+    "Las horas de estudio se concentran cerca de 11 horas semanales y presentan una forma bastante equilibrada en la parte central.",
+
+  Post_Semester_GPA =
+    "Los promedios posteriores se concentran en valores altos y existe una acumulación importante en el máximo de 4.",
+
+  Skill_Retention_Score =
+    "Los puntajes se concentran cerca de 76 puntos y también se observa una acumulación en el máximo de 100."
+)
+
+for (variable in variables_numericas_continuas) {
+
+  media_variable <- mean(
+    df_limpio[[variable]],
+    na.rm = TRUE
+  )
+
+  mediana_variable <- median(
+    df_limpio[[variable]],
+    na.rm = TRUE
+  )
+
+  grafico <- ggplot(
+    df_limpio,
+    aes(x = .data[[variable]])
+  ) +
+    geom_histogram(
+      bins = 35,
+      fill = "#2C7FB8",
+      color = "white"
+    ) +
+    geom_vline(
+      xintercept = media_variable,
+      linetype = "dashed",
+      linewidth = 0.8,
+      color = "black"
+    ) +
+    geom_vline(
+      xintercept = mediana_variable,
+      linetype = "dotted",
+      linewidth = 0.9,
+      color = "#B2182B"
+    ) +
+    labs(
+      title = paste(
+        "Distribución de",
+        nombre_variable(variable)
+      ),
+      subtitle = "Línea discontinua: media | Línea punteada: mediana",
+      x = nombre_variable(variable),
+      y = "Cantidad de estudiantes"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    )
+
+  print(grafico)
+
+  cat(
+    paste0(
+      "\n<div class='comentario-histograma'>",
+      comentarios_histogramas[[variable]],
+      "</div>",
+      "<div class='espacio-histograma'></div>\n"
+    )
+  )
+}
+```
+
+En general, las distribuciones presentan comportamientos diferentes. El uso de IA se concentra en valores bajos, mientras que los promedios académicos y la retención se concentran en valores altos.
+
+### Diagramas de caja
+
+Los diagramas de caja muestran la mediana, la dispersión y los posibles valores atípicos. La línea dentro de la caja representa la mediana y el rombo representa la media.
+
+```{r boxplots-numericos, fig.height=4.5, fig.show='asis', results='asis', out.width='95%'}
+for (variable in variables_numericas_continuas) {
+
+  valores <- df_limpio[[variable]]
+  valores <- valores[!is.na(valores)]
+
+  q1 <- quantile(valores, 0.25)
+  q3 <- quantile(valores, 0.75)
+  rango_iqr <- IQR(valores)
+
+  limite_inferior <- q1 - 1.5 * rango_iqr
+  limite_superior <- q3 + 1.5 * rango_iqr
+
+  cantidad_atipicos <- sum(
+    valores < limite_inferior |
+      valores > limite_superior
+  )
+
+  grafico <- ggplot(
+    df_limpio,
+    aes(
+      x = "",
+      y = .data[[variable]]
+    )
+  ) +
+    geom_boxplot(
+      fill = "#7FCDBB",
+      outlier.alpha = 0.35,
+      width = 0.4
+    ) +
+    stat_summary(
+      fun = mean,
+      geom = "point",
+      shape = 18,
+      size = 3
+    ) +
+    labs(
+      title = paste(
+        "Diagrama de caja de",
+        nombre_variable(variable)
+      ),
+      subtitle = "La línea representa la mediana y el rombo representa la media",
+      x = NULL,
+      y = nombre_variable(variable)
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold"),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      panel.grid.minor = element_blank()
+    )
+
+  print(grafico)
+
+  cat(
+    paste0(
+      "\n<div class='comentario-histograma'>",
+      "La mediana fue de <strong>",
+      round(median(valores), 2),
+      "</strong> y se identificaron <strong>",
+      cantidad_atipicos,
+      "</strong> posibles valores atípicos.",
+      "</div>",
+      "<div class='espacio-boxplot'></div>\n"
+    )
+  )
+}
+```
+
+Los posibles valores atípicos se conservaron porque se encuentran dentro de los rangos válidos definidos para las variables.
+
+### Evaluación de normalidad
+
+Se aplicó la prueba de Lilliefors. Un valor p menor a 0,05 indica que la distribución completa no se considera normal.
+
+```{r normalidad}
+set.seed(142)
+
+normalidad <- map_dfr(
+  variables_numericas_continuas,
+  function(variable) {
+
+    valores <- na.omit(
+      df_limpio[[variable]]
+    )
+
+    if (length(valores) > 5000) {
+      valores <- sample(
+        valores,
+        5000
+      )
+    }
+
+    prueba <- lillie.test(valores)
+
+    tibble(
+      Variable = nombre_variable(variable),
+      D = as.numeric(prueba$statistic),
+      P_valor = prueba$p.value,
+      Decision = if_else(
+        prueba$p.value < 0.05,
+        "Se rechaza normalidad",
+        "No se rechaza normalidad"
+      )
+    )
+  }
+)
+
+kable(
+  normalidad,
+  digits = 5,
+  caption = "Prueba de normalidad de Lilliefors"
+)
+```
+
+La prueba rechazó la normalidad en las variables continuas. Por ello, en los análisis posteriores se utiliza Spearman como referencia principal y Pearson como comparación.
+
+### Gráficos Q-Q
+
+Los gráficos Q-Q comparan la posición de los datos reales con la posición que tendrían en una distribución normal. Los puntos cercanos a la línea presentan mayor aproximación a la normalidad.
+
 ```{r graficos-qq, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+comentarios_qq <- c(
+  Pre_Semester_GPA =
+    "La parte central se acerca a la línea, pero los valores bajos y altos presentan desviaciones.",
+
+  Weekly_GenAI_Hours =
+    "Los puntos forman una curva clara y se alejan de la línea, especialmente cerca de 0 y 40 horas.",
+
+  Traditional_Study_Hours =
+    "La parte central se mantiene cerca de la línea, pero los extremos se apartan de ella.",
+
+  Post_Semester_GPA =
+    "La parte central se acerca a la línea, pero la acumulación en el promedio máximo de 4 rompe la normalidad.",
+
+  Skill_Retention_Score =
+    "La parte central se aproxima a la línea, pero existe una desviación importante cerca del máximo de 100."
+)
+
 set.seed(142)
 
 for (variable in variables_numericas_continuas) {
@@ -804,36 +1317,143 @@ for (variable in variables_numericas_continuas) {
     drop_na()
 
   if (nrow(datos_qq) > 5000) {
-    datos_qq <- slice_sample(datos_qq, n = 5000)
+    datos_qq <- slice_sample(
+      datos_qq,
+      n = 5000
+    )
   }
 
   grafico <- ggplot(
     datos_qq,
     aes(sample = .data[[variable]])
   ) +
-    stat_qq(alpha = 0.45) +
-    stat_qq_line(linewidth = 0.9) +
+    stat_qq(
+      alpha = 0.45
+    ) +
+    stat_qq_line(
+      linewidth = 0.9
+    ) +
     labs(
       title = paste(
         "Gráfico Q-Q de",
         nombre_variable(variable)
       ),
-      x = "Cuantiles teóricos",
-      y = "Cuantiles observados"
+      subtitle = "Puntos cerca de la línea = mayor aproximación a una distribución normal",
+      x = "Posición teórica (valores bajos ← centro → valores altos)",
+      y = paste(
+        "Valor observado de",
+        nombre_variable(variable)
+      )
     ) +
-    theme_minimal()
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    )
 
   print(grafico)
 
-  cat("\n<div class='separador-grafico'></div>\n")
+  cat(
+    paste0(
+      "\n<div class='comentario-histograma'>",
+      comentarios_qq[[variable]],
+      "</div>",
+      "<div class='separador-grafico'></div>\n"
+    )
+  )
 }
 ```
 
-Los puntos se alejan de la línea teórica en distintas partes de los gráficos, especialmente en los extremos. Esto respalda los resultados de Lilliefors e indica que las variables no presentan una distribución normal perfecta.
+Los gráficos muestran que algunas variables se aproximan a la línea en la parte central, pero todas presentan desviaciones en alguna parte de la distribución.
+
+## Variables numéricas discretas y escalas ordinales
+
+Estas variables toman valores específicos, por lo que se representan mediante gráficos de barras.
+
+```{r graficos-discretos, fig.height=4.5, fig.show='asis', results='asis', out.width='95%'}
+for (variable in variables_numericas_discretas) {
+
+  tabla <- df_limpio %>%
+    count(
+      Valor = .data[[variable]],
+      name = "Frecuencia"
+    ) %>%
+    mutate(
+      Porcentaje = Frecuencia / sum(Frecuencia)
+    )
+
+  grafico <- ggplot(
+    tabla,
+    aes(
+      x = factor(Valor),
+      y = Porcentaje
+    )
+  ) +
+    geom_col(
+      fill = "#2C7FB8"
+    ) +
+    geom_text(
+      aes(
+        label = scales::percent(
+          Porcentaje,
+          accuracy = 0.1
+        )
+      ),
+      vjust = -0.3,
+      size = 3.3
+    ) +
+    scale_y_continuous(
+      labels = scales::label_percent(
+        accuracy = 1
+      ),
+      expand = expansion(
+        mult = c(0, 0.15)
+      )
+    ) +
+    labs(
+      title = paste(
+        "Distribución de",
+        nombre_variable(variable)
+      ),
+      x = nombre_variable(variable),
+      y = "Porcentaje de estudiantes"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    )
+
+  print(grafico)
+
+  valor_principal <- tabla %>%
+    slice_max(
+      order_by = Frecuencia,
+      n = 1,
+      with_ties = FALSE
+    )
+
+  cat(
+    paste0(
+      "\n<div class='comentario-grafico'>",
+      "El valor más frecuente fue <strong>",
+      valor_principal$Valor,
+      "</strong>, con ",
+      scales::percent(
+        valor_principal$Porcentaje,
+        accuracy = 0.1
+      ),
+      " de los estudiantes.",
+      "</div>",
+      "<div class='separador-grafico'></div>\n"
+    )
+  )
+}
+```
 
 ## Variables categóricas
 
-Se calcularon las frecuencias y porcentajes de las variables categóricas para identificar cuáles categorías predominan en el conjunto de datos.
+Se calcularon las frecuencias y porcentajes para identificar las categorías más comunes.
 
 ```{r frecuencias-categoricas}
 variables_categoricas <- c(
@@ -848,7 +1468,9 @@ frecuencias_categoricas <- map_dfr(
 
     df_limpio %>%
       transmute(
-        Categoria = traducir_categoria(.data[[variable]])
+        Categoria = traducir_categoria(
+          .data[[variable]]
+        )
       ) %>%
       count(
         Categoria,
@@ -856,7 +1478,7 @@ frecuencias_categoricas <- map_dfr(
       ) %>%
       mutate(
         Variable = nombre_variable(variable),
-        Porcentaje = percent(
+        Porcentaje = scales::percent(
           Frecuencia / sum(Frecuencia),
           accuracy = 0.1
         )
@@ -882,38 +1504,92 @@ kable(
 
 ### Gráficos de las variables categóricas
 
-Los gráficos de barras permiten comparar visualmente la cantidad y el porcentaje de estudiantes en cada categoría.
+Los gráficos muestran el porcentaje de estudiantes perteneciente a cada categoría.
 
 ```{r graficos-categoricos, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
+orden_categorias <- list(
+  Year_of_Study = c(
+    "Primer año",
+    "Segundo año",
+    "Tercer año",
+    "Cuarto año",
+    "Posgrado"
+  ),
+
+  Prompt_Engineering_Skill = c(
+    "Principiante",
+    "Intermedio",
+    "Avanzado"
+  ),
+
+  Institutional_Policy = c(
+    "Prohibición estricta",
+    "Permitido con citación",
+    "Promovido activamente"
+  ),
+
+  Burnout_Risk_Level = c(
+    "Bajo",
+    "Medio",
+    "Alto"
+  ),
+
+  Paid_Subscription = c(
+    "No",
+    "Sí"
+  )
+)
+
 for (variable in variables_categoricas) {
 
   tabla <- df_limpio %>%
     transmute(
-      Categoria = traducir_categoria(.data[[variable]])
+      Categoria = traducir_categoria(
+        .data[[variable]]
+      )
     ) %>%
     count(
       Categoria,
       name = "Frecuencia"
     ) %>%
     mutate(
-      Porcentaje = Frecuencia / sum(Frecuencia),
-      Categoria = forcats::fct_reorder(
-        as.factor(Categoria),
-        Frecuencia
-      )
+      Porcentaje = Frecuencia / sum(Frecuencia)
     )
+
+  if (variable %in% names(orden_categorias)) {
+
+    tabla <- tabla %>%
+      mutate(
+        Categoria = factor(
+          Categoria,
+          levels = orden_categorias[[variable]]
+        )
+      )
+
+  } else {
+
+    tabla <- tabla %>%
+      mutate(
+        Categoria = forcats::fct_reorder(
+          as.factor(Categoria),
+          Porcentaje
+        )
+      )
+  }
 
   grafico <- ggplot(
     tabla,
     aes(
       x = Categoria,
-      y = Frecuencia
+      y = Porcentaje
     )
   ) +
-    geom_col(fill = "#225EA8") +
+    geom_col(
+      fill = "#225EA8"
+    ) +
     geom_text(
       aes(
-        label = percent(
+        label = scales::percent(
           Porcentaje,
           accuracy = 0.1
         )
@@ -922,8 +1598,13 @@ for (variable in variables_categoricas) {
       size = 3.5
     ) +
     coord_flip() +
-    expand_limits(
-      y = max(tabla$Frecuencia) * 1.18
+    scale_y_continuous(
+      labels = scales::label_percent(
+        accuracy = 1
+      ),
+      expand = expansion(
+        mult = c(0, 0.18)
+      )
     ) +
     labs(
       title = paste(
@@ -931,9 +1612,13 @@ for (variable in variables_categoricas) {
         nombre_variable(variable)
       ),
       x = "",
-      y = "Frecuencia"
+      y = "Porcentaje de estudiantes"
     ) +
-    theme_minimal()
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    )
 
   print(grafico)
 
@@ -947,26 +1632,24 @@ for (variable in variables_categoricas) {
   cat(
     paste0(
       "\n<div class='comentario-grafico'>",
-      "La categoría con mayor frecuencia fue <strong>",
+      "La categoría más frecuente fue <strong>",
       as.character(categoria_principal$Categoria),
       "</strong>, con ",
-      percent(
+      scales::percent(
         categoria_principal$Porcentaje,
         accuracy = 0.1
       ),
       " de los estudiantes.",
-      "</div>\n"
+      "</div>",
+      "<div class='separador-grafico'></div>\n"
     )
   )
-
-  cat("\n<div class='separador-grafico'></div>\n")
 }
 ```
 
 ## Interpretación univariada
 
-El análisis univariado mostró que las variables continuas no presentan una distribución normal perfecta y contienen algunos valores atípicos válidos. En las variables categóricas se identificaron diferencias en la frecuencia de sus categorías. Estos resultados permiten seleccionar adecuadamente las técnicas estadísticas utilizadas en los análisis posteriores.
-
+Las variables continuas no presentan una distribución normal completa, aunque algunas se aproximan a la línea teórica en su parte central. El uso semanal de IA se concentra en valores bajos, mientras que los promedios académicos y la retención se concentran en valores altos. Estos resultados respaldan el uso de Spearman como correlación principal y Pearson como comparación.
 
 # Análisis bivariado
 
@@ -1038,68 +1721,6 @@ Las correlaciones permiten medir la dirección y la intensidad de la relación e
 ### Correlación de Pearson
 
 La correlación de Pearson mide relaciones lineales. Se conserva como referencia comparativa, aunque debe interpretarse con precaución porque las variables no presentan normalidad.
-
-```{r correlacion-pearson, fig.height=6}
-matriz_pearson <- cor(
-  df_limpio %>%
-    select(all_of(variables_numericas_continuas)),
-  method = "pearson",
-  use = "pairwise.complete.obs"
-)
-
-orden_pearson <- vapply(
-  variables_numericas_continuas,
-  nombre_variable,
-  character(1)
-)
-
-tabla_pearson <- as.data.frame(
-  as.table(matriz_pearson)
-) %>%
-  mutate(
-    Var1 = factor(
-      vapply(as.character(Var1), nombre_variable, character(1)),
-      levels = orden_pearson
-    ),
-    Var2 = factor(
-      vapply(as.character(Var2), nombre_variable, character(1)),
-      levels = orden_pearson
-    )
-  )
-
-ggplot(
-  tabla_pearson,
-  aes(Var1, Var2, fill = Freq)
-) +
-  geom_tile() +
-  geom_text(
-    aes(label = round(Freq, 2)),
-    size = 3.4
-  ) +
-  scale_fill_gradient2(
-    low = "#B2182B",
-    mid = "white",
-    high = "#2166AC",
-    midpoint = 0,
-    limits = c(-1, 1)
-  ) +
-  labs(
-    title = "Matriz de correlación de Pearson",
-    subtitle = "Relaciones lineales entre variables continuas",
-    x = "",
-    y = "",
-    fill = "Correlación"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(
-      angle = 45,
-      hjust = 1
-    )
-  )
-```
-
-Pearson se presenta únicamente como comparación. Debido a los resultados de normalidad, Spearman será el método principal para interpretar las relaciones.
 
 ### Correlación de Spearman
 
@@ -1211,26 +1832,12 @@ Los diagramas de dispersión permiten observar algunas relaciones relevantes. Se
 
 ```{r dispersiones-seleccionadas, fig.height=5, fig.show='asis', results='asis', out.width='95%'}
 pares_numericos <- list(
-  c(
-    "Pre_Semester_GPA",
-    "Post_Semester_GPA"
-  ),
-  c(
-    "Weekly_GenAI_Hours",
-    "Post_Semester_GPA"
-  ),
-  c(
-    "Weekly_GenAI_Hours",
-    "Skill_Retention_Score"
-  ),
-  c(
-    "Traditional_Study_Hours",
-    "Post_Semester_GPA"
-  ),
-  c(
-    "Perceived_AI_Dependency",
-    "Anxiety_Level_During_Exams"
-  )
+  c("Pre_Semester_GPA", "Post_Semester_GPA"),
+  c("Weekly_GenAI_Hours", "Post_Semester_GPA"),
+  c("Weekly_GenAI_Hours", "Skill_Retention_Score"),
+  c("Traditional_Study_Hours", "Post_Semester_GPA"),
+  c("Perceived_AI_Dependency", "Anxiety_Level_During_Exams"),
+  c("Weekly_GenAI_Hours", "Perceived_AI_Dependency")
 )
 
 set.seed(142)
@@ -2656,6 +3263,7 @@ En esta sección se resumen los resultados más importantes obtenidos durante la
 ```{r resultados-principales, results='asis'}
 # Relación de Spearman más intensa sin repetir la diagonal.
 matriz_auxiliar <- matriz_spearman
+
 matriz_auxiliar[
   lower.tri(matriz_auxiliar, diag = TRUE)
 ] <- NA
@@ -2682,6 +3290,28 @@ valor_cor <- matriz_auxiliar[
   indice_mayor[1],
   indice_mayor[2]
 ]
+
+# Correlaciones directamente relacionadas con el uso de IA.
+cor_ia_promedio <- unname(
+  matriz_spearman[
+    "Weekly_GenAI_Hours",
+    "Post_Semester_GPA"
+  ]
+)
+
+cor_ia_retencion <- unname(
+  matriz_spearman[
+    "Weekly_GenAI_Hours",
+    "Skill_Retention_Score"
+  ]
+)
+
+cor_ia_dependencia <- unname(
+  matriz_spearman[
+    "Weekly_GenAI_Hours",
+    "Perceived_AI_Dependency"
+  ]
+)
 
 # Promedios académicos.
 promedio_previo <- mean(
@@ -2724,7 +3354,7 @@ texto_tamanos_cluster <- tamanos_cluster %>%
       ": ",
       Cantidad,
       " estudiantes (",
-      percent(
+      scales::percent(
         Porcentaje,
         accuracy = 0.1
       ),
@@ -2769,11 +3399,19 @@ cat(
 
 cat(
   paste0(
+    "- Las pruebas de Lilliefors rechazaron la normalidad de las variables continuas. ",
+    "Por esta razón, se utilizaron principalmente métodos no paramétricos, ",
+    "como la correlación de Spearman y la prueba de Kruskal-Wallis.\n"
+  )
+)
+
+cat(
+  paste0(
     "- El promedio académico aumentó de **",
     round(promedio_previo, 3),
     "** antes del semestre a **",
     round(promedio_posterior, 3),
-    "** después del semestre, lo que representa una diferencia promedio de **",
+    "** después del semestre. La diferencia descriptiva fue de **",
     round(diferencia_promedios, 3),
     " puntos**.\n"
   )
@@ -2790,6 +3428,28 @@ cat(
     "**, considerada ",
     interpretar_correlacion(valor_cor),
     ".\n"
+  )
+)
+
+cat(
+  paste0(
+    "- Las horas semanales de uso de IA presentaron una correlación de Spearman de **",
+    round(cor_ia_promedio, 3),
+    "** con el promedio posterior y de **",
+    round(cor_ia_retencion, 3),
+    "** con la retención de habilidades. Ambas relaciones fueron ",
+    "prácticamente nulas, por lo que un mayor uso de IA no estuvo asociado ",
+    "con mejores calificaciones ni con una mayor retención.\n"
+  )
+)
+
+cat(
+  paste0(
+    "- Las horas semanales de uso de IA presentaron una correlación de Spearman de **",
+    round(cor_ia_dependencia, 3),
+    "** con la dependencia percibida, considerada ",
+    interpretar_correlacion(cor_ia_dependencia),
+    ". Esto indica que un mayor uso de IA tendió a relacionarse con una mayor dependencia.\n"
   )
 )
 
@@ -2830,16 +3490,25 @@ cat(
 cat(
   paste0(
     "- Los dos primeros componentes principales explican conjuntamente **",
-    percent(
+    scales::percent(
       sum(porcentaje_varianza[1:2]),
       accuracy = 0.1
     ),
     "** de la variabilidad. Los primeros tres componentes explican **",
-    percent(
+    scales::percent(
       sum(porcentaje_varianza[1:3]),
       accuracy = 0.1
     ),
-    "**.\n"
+    "**. El ACP permitió resumir patrones generales entre las variables, ",
+    "aunque los primeros componentes no conservan toda la información original.\n"
+  )
+)
+
+cat(
+  paste0(
+    "- El círculo de correlaciones permitió observar conjuntamente cuáles variables ",
+    "presentaban comportamientos similares, opuestos o con poca relación dentro de ",
+    "los dos primeros componentes.\n"
   )
 )
 
@@ -2861,7 +3530,8 @@ cat(
     interpretar_silueta(
       silueta_promedio_final
     ),
-    "**. Por esta razón, los clústeres representan perfiles aproximados y no grupos completamente separados.\n"
+    "**. Por esta razón, los clústeres representan perfiles aproximados ",
+    "y no grupos completamente separados.\n"
   )
 )
 
@@ -2897,11 +3567,27 @@ cat(
       cluster_mayor_uso_ia$Perceived_AI_Dependency,
       3
     ),
-    "** y una ansiedad promedio de **",
+    "**, una ansiedad promedio de **",
     round(
       cluster_mayor_uso_ia$Anxiety_Level_During_Exams,
       3
     ),
+    "** y un promedio posterior de **",
+    round(
+      cluster_mayor_uso_ia$Post_Semester_GPA,
+      3
+    ),
+    "**.\n"
+  )
+)
+
+cat(
+  paste0(
+    "- El clúster con mayor uso de IA no fue el que obtuvo el mejor rendimiento. ",
+    "El mejor promedio posterior correspondió al **clúster ",
+    cluster_mayor_rendimiento$Cluster,
+    "**, mientras que el mayor uso de IA correspondió al **clúster ",
+    cluster_mayor_uso_ia$Cluster,
     "**.\n"
   )
 )
@@ -2923,6 +3609,15 @@ cat(
     "**.\n"
   )
 )
+
+cat(
+  paste0(
+    "- En conjunto, los resultados indican que un mayor uso de IA no estuvo ",
+    "relacionado con mejores resultados académicos, pero sí con una mayor ",
+    "dependencia percibida. Estas relaciones son asociaciones estadísticas ",
+    "y no demuestran causalidad.\n"
+  )
+)
 ```
 
 Los resultados deben interpretarse considerando tanto la significancia estadística como la intensidad práctica de las relaciones. Debido al tamaño de la muestra, algunas diferencias pueden resultar estadísticamente significativas aunque su efecto sea pequeño.
@@ -2931,23 +3626,40 @@ Los resultados deben interpretarse considerando tanto la significancia estadíst
 
 1. El conjunto de datos se encontró completo y en condiciones adecuadas para el análisis. No se detectaron valores faltantes, registros duplicados ni valores fuera de los rangos establecidos, por lo que se conservaron los `r nrow(df_limpio)` estudiantes y las `r ncol(df_limpio)` variables.
 
-2. Las variables continuas no presentaron una distribución normal perfecta. Esto fue confirmado mediante la prueba de Lilliefors, los histogramas y los gráficos Q-Q, por lo que se utilizaron principalmente métodos no paramétricos.
+2. Las variables continuas no se ajustaron a una distribución normal. Esto fue confirmado mediante la prueba de Lilliefors, los histogramas y los gráficos Q-Q. Por esta razón, se utilizaron principalmente métodos no paramétricos, como la correlación de Spearman y la prueba de Kruskal-Wallis.
 
-3. El promedio académico posterior al semestre fue mayor que el promedio previo. Además, ambas variables presentaron la relación numérica más intensa del análisis, lo que indica que los estudiantes con mejores resultados previos tienden también a obtener mejores resultados posteriores.
+3. El promedio académico posterior fue descriptivamente mayor que el promedio previo, con una diferencia de `r round(diferencia_promedios, 3)` puntos. Además, ambos promedios presentaron una correlación de Spearman de `r round(valor_cor, 3)`, lo que indica que los estudiantes con mejores resultados previos tendieron a conservar un mejor rendimiento posterior.
 
-4. Las horas semanales de uso de IA presentaron una distribución asimétrica, con una mayor concentración en valores bajos y algunos estudiantes con niveles elevados de uso. Estos valores se conservaron porque se encontraban dentro de rangos posibles.
+4. Las horas semanales de uso de IA presentaron una correlación de `r round(cor_ia_promedio, 3)` con el promedio posterior y de `r round(cor_ia_retencion, 3)` con la retención de habilidades. Estas relaciones fueron prácticamente nulas, por lo que un mayor uso de IA no estuvo asociado con mejores calificaciones ni con una mayor retención.
 
-5. Las pruebas chi-cuadrado permitieron identificar asociaciones entre variables categóricas. Sin embargo, la V de Cramer mostró que la significancia estadística debe analizarse junto con la intensidad de cada asociación.
+5. La relación entre las horas semanales de IA y la dependencia percibida fue de `r round(cor_ia_dependencia, 3)`, considerada `r interpretar_correlacion(cor_ia_dependencia)`. Por lo tanto, los estudiantes que utilizaban más tiempo la IA tendieron a presentar una mayor dependencia percibida.
 
-6. Las pruebas de Kruskal-Wallis identificaron diferencias entre algunos grupos. El epsilon cuadrado permitió comprobar si estas diferencias tenían un efecto práctico insignificante, pequeño, moderado o grande.
+6. Las horas semanales de uso de IA presentaron una distribución asimétrica, con una mayor concentración de estudiantes en niveles bajos de uso y un grupo menor con niveles elevados. Estos valores se conservaron porque se encontraban dentro de los rangos posibles del conjunto de datos.
 
-7. El ACP permitió resumir las ocho variables numéricas utilizadas. Los dos primeros componentes explicaron aproximadamente `r percent(sum(porcentaje_varianza[1:2]), accuracy = 0.1)` de la variabilidad y los primeros tres explicaron `r percent(sum(porcentaje_varianza[1:3]), accuracy = 0.1)`.
+7. La asociación categórica más intensa se encontró entre `r asociacion_categorica_mayor$Variable_1` y `r asociacion_categorica_mayor$Variable_2`, con una V de Cramer de `r round(asociacion_categorica_mayor$V_Cramer, 3)`, considerada `r asociacion_categorica_mayor$Intensidad`.
 
-8. K-means identificó `r mejor_k` perfiles de estudiantes. El clúster `r as.character(cluster_mayor_rendimiento$Cluster)` presentó el mejor rendimiento académico, junto con una retención promedio de habilidades de `r round(cluster_mayor_rendimiento$Skill_Retention_Score, 3)`; el clúster `r as.character(cluster_mayor_uso_ia$Cluster)` concentró el mayor uso semanal de IA y presentó una dependencia promedio de `r round(cluster_mayor_uso_ia$Perceived_AI_Dependency, 3)` y una ansiedad promedio de `r round(cluster_mayor_uso_ia$Anxiety_Level_During_Exams, 3)`; mientras que el clúster `r as.character(cluster_menor_rendimiento$Cluster)` presentó los resultados académicos más bajos.
+8. La comparación numérica-categórica con mayor tamaño del efecto fue `r efecto_kruskal_mayor$Variable_numerica` según `r efecto_kruskal_mayor$Variable_categorica`. El epsilon cuadrado fue de `r round(efecto_kruskal_mayor$Epsilon_cuadrado, 3)`, considerado `r efecto_kruskal_mayor$Tamano_efecto`.
 
-9. La silueta promedio de `r round(silueta_promedio_final, 3)` indica que la separación entre los clústeres es `r interpretar_silueta(silueta_promedio_final)`. Por ello, los grupos deben considerarse perfiles generales con cierto traslape y no categorías completamente diferenciadas.
+9. El ACP permitió resumir las ocho variables numéricas utilizadas y observar sus relaciones de manera conjunta. Los dos primeros componentes explicaron aproximadamente `r scales::percent(sum(porcentaje_varianza[1:2]), accuracy = 0.1)` de la variabilidad y los primeros tres explicaron `r scales::percent(sum(porcentaje_varianza[1:3]), accuracy = 0.1)`. Por ello, los tres primeros componentes ofrecieron un resumen útil, aunque no representaron toda la información del conjunto de datos.
 
-10. Los resultados permiten describir relaciones y perfiles relacionados con el uso de IA, los hábitos de estudio y el desempeño académico. No obstante, no permiten concluir que la inteligencia artificial sea la causa directa de mejoras o deterioros en el rendimiento de los estudiantes.
+10. K-means identificó `r mejor_k` perfiles generales de estudiantes. El clúster `r as.character(cluster_mayor_rendimiento$Cluster)` presentó el mejor promedio posterior y la mayor retención de habilidades, mientras que el clúster `r as.character(cluster_mayor_uso_ia$Cluster)` concentró el mayor uso semanal de IA, junto con mayores niveles de dependencia y ansiedad.
+
+11. El clúster con mayor uso de IA obtuvo un promedio posterior de `r round(cluster_mayor_uso_ia$Post_Semester_GPA, 3)`, mientras que el clúster con mejor rendimiento obtuvo `r round(cluster_mayor_rendimiento$Post_Semester_GPA, 3)`. Por lo tanto, el grupo que utilizó más la IA no fue el que presentó los mejores resultados académicos.
+
+12. La silueta promedio de `r round(silueta_promedio_final, 3)` indica que la separación entre los clústeres fue `r interpretar_silueta(silueta_promedio_final)`. Por ello, los grupos deben considerarse perfiles aproximados con cierto traslape y no categorías completamente diferenciadas.
+
+13. En conjunto, el análisis muestra que el rendimiento previo fue el elemento más relacionado con el rendimiento posterior. El uso de IA no presentó una relación importante con las calificaciones ni con la retención de habilidades, pero sí mostró una asociación moderada con la dependencia percibida.
+
+14. Los resultados permiten describir asociaciones y perfiles relacionados con el uso de IA, los hábitos de estudio y el desempeño académico. Sin embargo, debido a la naturaleza observacional del conjunto de datos, no se puede afirmar que la inteligencia artificial sea la causa directa de mejoras o deterioros en el rendimiento, la dependencia o la ansiedad.
+
+# Conclusion final
+
+El análisis permitió concluir que utilizar más horas de inteligencia artificial no se relacionó de manera importante con mejores calificaciones ni con una mayor retención de habilidades. El rendimiento previo fue el factor más relacionado con el rendimiento posterior, lo que indica que los estudiantes que ya tenían mejores resultados tendieron a mantenerlos.
+
+El mayor uso de IA sí estuvo asociado con una mayor dependencia percibida. Además, el grupo que más utilizó IA presentó niveles más altos de dependencia y ansiedad, pero no obtuvo el mejor rendimiento académico. Por esta razón, la IA puede ser una herramienta de apoyo, pero su uso frecuente por sí solo no garantiza mejores resultados.
+
+En consecuencia, lo más recomendable es promover un uso equilibrado y consciente de la inteligencia artificial, acompañado de estudio tradicional, desarrollo de habilidades propias y supervisión académica. Los resultados muestran asociaciones y tendencias, pero no permiten afirmar que la IA sea la causa directa de los cambios observados.
+
 
 # Limitaciones
 
